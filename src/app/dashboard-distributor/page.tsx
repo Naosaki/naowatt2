@@ -146,10 +146,6 @@ export default function DistributorDashboardPage() {
               Tableau de bord
             </Link>
             <Link href="#" className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
-              <Store className="mr-2 h-4 w-4" />
-              Mes produits
-            </Link>
-            <Link href="#" className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
               <FileText className="mr-2 h-4 w-4" />
               Documents techniques
             </Link>
