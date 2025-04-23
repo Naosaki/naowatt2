@@ -117,11 +117,26 @@ export default function ManageAccountsPage() {
 
   // Supprimer un compte
   const handleDeleteAccount = async () => {
-    if (!userToDelete) return;
+    if (!userToDelete || !user) return;
     
     try {
-      // Supprimer l'utilisateur de Firestore
-      await deleteDoc(doc(db, 'users', userToDelete.uid));
+      // Appeler l'API pour supprimer l'utilisateur à la fois de Firebase Authentication et de Firestore
+      const response = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userToDelete.uid,
+          adminUserId: user.uid,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la suppression du compte');
+      }
       
       // Mettre à jour la liste des utilisateurs gérés par le distributeur
       if (user && user.managedUsers && user.managedUsers.includes(userToDelete.uid)) {
@@ -142,7 +157,7 @@ export default function ManageAccountsPage() {
       console.error('Erreur lors de la suppression du compte:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer le compte. Veuillez réessayer plus tard.",
+        description: error instanceof Error ? error.message : "Impossible de supprimer le compte. Veuillez réessayer plus tard.",
         variant: "destructive",
       });
     } finally {
