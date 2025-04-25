@@ -10,7 +10,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<User>;
-  signUp: (email: string, password: string, displayName: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -147,8 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, displayName: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string) => {
+  const signUp = async (email: string, password: string, displayName: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser: boolean = false) => {
     try {
+      // Sauvegarder l'utilisateur actuel si keepCurrentUser est true
+      const currentUser = auth.currentUser;
+      const currentUserEmail = currentUser?.email;
+      const currentUserPassword = keepCurrentUser ? sessionStorage.getItem('tempPassword') || '' : '';
+      
+      // Créer le nouvel utilisateur
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       
@@ -172,6 +178,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await setDoc(doc(db, 'users', user.uid), {
           managedUsers: [...(user.managedUsers || []), firebaseUser.uid]
         }, { merge: true });
+      }
+      
+      // Si on doit conserver l'utilisateur actuel, se reconnecter avec ses identifiants
+      if (keepCurrentUser && currentUserEmail && currentUserPassword) {
+        await signInWithEmailAndPassword(auth, currentUserEmail, currentUserPassword);
       }
     } catch (error) {
       console.error('Error signing up:', error);
@@ -199,10 +210,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

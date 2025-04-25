@@ -20,8 +20,9 @@ import { CategoryManagement } from '@/components/admin/category-management';
 import { ProductTypeManagement } from '@/components/admin/product-type-management';
 import { LanguageManagement } from '@/components/admin/language-management';
 import { AppSettingsManagement } from '@/components/admin/app-settings-management';
+import { EmailManagement } from '@/components/admin/email-management/email-management';
 import { DashboardOverview } from '@/components/admin/dashboard-overview';
-import { Eye, FileEdit, Trash2, Box, Settings, Globe, BarChart } from 'lucide-react';
+import { Eye, FileEdit, Trash2, Box, Settings, Globe, BarChart, Mail } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AppLogo } from '@/components/app-logo';
 
@@ -541,6 +542,14 @@ export default function AdminPage() {
               Utilisateurs
             </Button>
             <Button 
+              variant={activeTab === 'emails' ? 'default' : 'ghost'} 
+              className="w-full justify-start" 
+              onClick={() => setActiveTab('emails')}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Emails
+            </Button>
+            <Button 
               variant={activeTab === 'settings' ? 'default' : 'ghost'} 
               className="w-full justify-start" 
               onClick={() => setActiveTab('settings')}
@@ -729,7 +738,26 @@ export default function AdminPage() {
           )}
 
           {activeTab === 'settings' && (
-            <AppSettingsManagement />
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Paramètres de l'application</h2>
+              </div>
+              
+              <AppSettingsManagement 
+                settings={appSettings} 
+                onSettingsUpdated={(newSettings) => setAppSettings(newSettings)} 
+              />
+            </div>
+          )}
+          
+          {activeTab === 'emails' && (
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Gestion des emails</h2>
+              </div>
+              
+              <EmailManagement />
+            </div>
           )}
         </main>
       </div>
