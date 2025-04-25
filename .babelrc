@@ -1,0 +1,4 @@
+{
+  "presets": ["next/babel"],
+  "ignore": ["**/components/emails/**/*.tsx"]
+}
