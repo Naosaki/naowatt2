@@ -5,6 +5,14 @@ const nextConfig = {
   // output: 'export',
   poweredByHeader: false,
   reactStrictMode: true,
+  eslint: {
+    // Désactiver les vérifications ESLint lors du build pour éviter les échecs de déploiement
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Désactiver les vérifications TypeScript lors du build pour éviter les échecs de déploiement
+    ignoreBuildErrors: true,
+  },
   images: {
     domains: ['firebasestorage.googleapis.com'],
     formats: ['image/avif', 'image/webp'],
@@ -21,12 +29,6 @@ const nextConfig = {
     optimizeCss: true,
   },
   compress: true,
-  typescript: {
-    ignoreBuildErrors: true
-  },
-  eslint: {
-    ignoreDuringBuilds: true
-  }
 };
 
 module.exports = nextConfig;
