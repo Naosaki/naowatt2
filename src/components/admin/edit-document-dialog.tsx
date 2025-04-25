@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Document as DocumentType, Category, ProductType, Language } from '@/lib/types';
+import { Product } from '@/types/product';
 
 interface EditDocumentDialogProps {
   document: DocumentType | null;
@@ -47,6 +48,8 @@ export function EditDocumentDialog({ document, isOpen, onClose, onDocumentUpdate
   const [categories, setCategories] = useState<Category[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
+  const [products, setProducts] = useState<(Product & { id: string })[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
 
   // Charger les catégories depuis Firestore
   useEffect(() => {
@@ -103,10 +106,30 @@ export function EditDocumentDialog({ document, isOpen, onClose, onDocumentUpdate
       }
     };
 
+    // Charger les produits depuis Firestore
+    const fetchProducts = async () => {
+      try {
+        const q = query(collection(db, 'products'), orderBy('name'));
+        const querySnapshot = await getDocs(q);
+        
+        const productsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as (Product & { id: string })[];
+        
+        // Filtrer pour n'inclure que les produits actifs
+        const activeProducts = productsData.filter(product => product.active);
+        setProducts(activeProducts);
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits:', error);
+      }
+    };
+
     if (isOpen) {
       fetchCategories();
       fetchProductTypes();
       fetchLanguages();
+      fetchProducts();
     }
   }, [isOpen]);
 
@@ -120,6 +143,7 @@ export function EditDocumentDialog({ document, isOpen, onClose, onDocumentUpdate
       setLanguage(document.language || '');
       setVersion(document.version || '');
       setAccessRoles(document.accessRoles || ['admin']);
+      setSelectedProduct(document.productId || 'none');
     }
   }, [document]);
 
@@ -146,6 +170,7 @@ export function EditDocumentDialog({ document, isOpen, onClose, onDocumentUpdate
         language,
         version,
         accessRoles,
+        productId: selectedProduct === 'none' ? null : selectedProduct,
       };
 
       // Mise à jour du document dans Firestore
@@ -180,7 +205,7 @@ export function EditDocumentDialog({ document, isOpen, onClose, onDocumentUpdate
         <DialogHeader>
           <DialogTitle>Modifier le document</DialogTitle>
           <DialogDescription>
-            Modifiez les informations du document. Les champs marqués d&apos;un astérisque (*) sont obligatoires.
+            Modifiez les informations du document. Les champs marqu&apos;s d&apos;un ast&apos;risque (*) sont obligatoires.
           </DialogDescription>
         </DialogHeader>
 
@@ -211,6 +236,25 @@ export function EditDocumentDialog({ document, isOpen, onClose, onDocumentUpdate
                 className="col-span-3"
                 placeholder="Description du document"
               />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="product" className="text-right">
+                Produit
+              </Label>
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionner un produit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun produit</SelectItem>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">

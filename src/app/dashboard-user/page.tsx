@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AppLogo } from '@/components/app-logo';
 import { UserProfileMenu } from '@/components/user-profile-menu';
-import { LayoutDashboard, Download, Search } from 'lucide-react';
+import { LayoutDashboard, Download, Search, Book } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, where, doc, getDoc, DocumentReference } from 'firebase/firestore';
 import { Document as DocumentType, DownloadHistory } from '@/lib/types';
@@ -16,6 +16,7 @@ import { fr } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { ProductCatalog } from '@/components/catalog/product-catalog';
 
 export default function UserDashboardPage() {
   return (
@@ -609,6 +610,13 @@ function UserDashboardContent() {
               Documents
             </button>
             <button 
+              onClick={() => setActiveTab('catalog')}
+              className={`flex w-full items-center rounded-md px-3 py-2 text-sm font-medium ${activeTab === 'catalog' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              <Book className="mr-2 h-4 w-4" />
+              Catalogue
+            </button>
+            <button 
               onClick={() => setActiveTab('downloads')}
               className={`flex w-full items-center rounded-md px-3 py-2 text-sm font-medium ${activeTab === 'downloads' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
             >
@@ -770,6 +778,10 @@ function UserDashboardContent() {
               </div>
             </TabsContent>
             
+            <TabsContent value="catalog" className="mt-0">
+              <ProductCatalog userRole={user?.role || 'user'} />
+            </TabsContent>
+            
             <TabsContent value="downloads" className="mt-0">
               <div className="mb-6">
                 <h1 className="text-2xl font-bold">Mes téléchargements</h1>
@@ -785,7 +797,7 @@ function UserDashboardContent() {
                 
                 {loadingHistory ? (
                   <div className="flex h-40 items-center justify-center rounded-lg border">
-                    <p>Chargement de l&apos;historique des téléchargements...</p>
+                    <p>Chargement de l'historique des téléchargements...</p>
                   </div>
                 ) : downloadHistory.length === 0 ? (
                   <div className="flex h-40 items-center justify-center rounded-lg border">
