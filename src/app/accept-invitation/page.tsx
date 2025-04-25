@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,8 @@ interface Invitation {
   expiresAt: Date;
 }
 
-export default function RegisterPage() {
+// Composant qui utilise useSearchParams enveloppé dans Suspense
+function RegisterContent() {
   const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,319 +50,333 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
-  
-  // Vérifier la validité du token d'invitation
+
+  // Vérifier la validité du token
   useEffect(() => {
     const verifyToken = async () => {
-      if (!token || !role) {
+      if (!token) {
         setIsVerifying(false);
+        setError('Aucun token d\'invitation fourni');
         return;
       }
-      
+
       try {
-        // Rechercher l'invitation dans Firestore
-        const invitationsRef = collection(db, 'invitations');
-        const q = query(
-          invitationsRef,
-          where('token', '==', token),
-          where('role', '==', role),
-          where('status', '==', 'pending')
+        // Rechercher l'invitation correspondant au token
+        const invitationsQuery = query(
+          collection(db, 'invitations'),
+          where('token', '==', token)
         );
-        
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          setIsTokenValid(false);
+
+        const invitationsSnapshot = await getDocs(invitationsQuery);
+
+        if (invitationsSnapshot.empty) {
           setIsVerifying(false);
+          setError('Invitation invalide ou expirée');
           return;
         }
-        
-        // Vérifier si l'invitation n'a pas expiré
-        const invitationDoc = querySnapshot.docs[0];
-        const invitationData = invitationDoc.data();
-        const expiresAt = invitationData.expiresAt.toDate();
-        
-        if (expiresAt < new Date()) {
-          setIsTokenValid(false);
+
+        // Récupérer les données de l'invitation
+        const invitationData = invitationsSnapshot.docs[0].data() as Omit<Invitation, 'id'> & { createdAt: any, expiresAt: any };
+        const invitationId = invitationsSnapshot.docs[0].id;
+
+        const invitation: Invitation = {
+          ...invitationData,
+          id: invitationId,
+          createdAt: invitationData.createdAt?.toDate() || new Date(),
+          expiresAt: invitationData.expiresAt?.toDate() || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        };
+
+        // Vérifier si l'invitation est toujours valide
+        if (invitation.status !== 'pending') {
           setIsVerifying(false);
+          setError('Cette invitation a déjà été utilisée ou annulée');
           return;
         }
-        
+
+        // Vérifier si l'invitation n'est pas expirée
+        if (invitation.expiresAt < new Date()) {
+          setIsVerifying(false);
+          setError('Cette invitation a expiré');
+          return;
+        }
+
         // L'invitation est valide
-        setInvitation({
-          id: invitationDoc.id,
-          email: invitationData.email,
-          name: invitationData.name,
-          role: invitationData.role as 'installer' | 'user',
-          companyName: invitationData.companyName,
-          inviterId: invitationData.inviterId,
-          inviterName: invitationData.inviterName,
-          inviterCompany: invitationData.inviterCompany,
-          token: invitationData.token,
-          status: invitationData.status as 'pending' | 'accepted' | 'rejected',
-          createdAt: invitationData.createdAt.toDate(),
-          expiresAt: expiresAt
-        });
+        setInvitation(invitation);
         setIsTokenValid(true);
         setIsVerifying(false);
       } catch (error) {
         console.error('Erreur lors de la vérification du token:', error);
-        setIsTokenValid(false);
         setIsVerifying(false);
+        setError('Une erreur est survenue lors de la vérification de l\'invitation');
       }
     };
-    
+
     verifyToken();
-  }, [token, role]);
-  
-  // Fonction pour vérifier la force du mot de passe
-  const checkPasswordStrength = (password: string) => {
+  }, [token]);
+
+  // Vérifier la force du mot de passe
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength(0);
+      return;
+    }
+
     let strength = 0;
-    
-    // Longueur > 8
+
+    // Longueur minimale
     if (password.length >= 8) strength += 1;
-    
-    // Contient des chiffres
+
+    // Présence de chiffres
     if (/\d/.test(password)) strength += 1;
-    
-    // Contient des minuscules et majuscules
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 1;
-    
-    // Contient des caractères spéciaux
-    if (/[^a-zA-Z\d]/.test(password)) strength += 1;
-    
+
+    // Présence de lettres minuscules
+    if (/[a-z]/.test(password)) strength += 1;
+
+    // Présence de lettres majuscules
+    if (/[A-Z]/.test(password)) strength += 1;
+
+    // Présence de caractères spéciaux
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 1;
+
     setPasswordStrength(strength);
-  };
-  
-  // Gestionnaire de changement de mot de passe
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value;
-    setPassword(newPassword);
-    checkPasswordStrength(newPassword);
-  };
-  
-  // Gestionnaire de soumission du formulaire
+  }, [password]);
+
+  // Fonction pour créer le compte
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!invitation) return;
-    
+
+    if (!invitation) {
+      setError('Invitation invalide');
+      return;
+    }
+
     if (password !== confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      setError('Les mots de passe ne correspondent pas');
       return;
     }
-    
+
     if (password.length < 8) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      setError('Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
-    
+
+    if (passwordStrength < 3) {
+      setError('Le mot de passe est trop faible. Ajoutez des chiffres, des lettres majuscules et des caractères spéciaux.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
-    
+
     try {
       // Créer le compte utilisateur
-      await signUp(
-        invitation.email,
-        password,
-        invitation.name,
-        invitation.role,
-        invitation.inviterId,
-        invitation.companyName
-      );
-      
+      const userCredential = await signUp(invitation.email, password);
+
+      if (!userCredential || !userCredential.user) {
+        throw new Error('Impossible de créer le compte');
+      }
+
       // Mettre à jour le statut de l'invitation
       await updateDoc(doc(db, 'invitations', invitation.id), {
         status: 'accepted',
-        acceptedAt: new Date()
+        acceptedAt: new Date(),
       });
-      
-      toast.success('Votre compte a été créé avec succès');
-      
-      // Rediriger vers la page appropriée selon le rôle
-      setTimeout(() => {
-        if (invitation.role === 'installer') {
-          router.push('/dashboard-installer');
-        } else {
-          router.push('/dashboard');
-        }
-      }, 2000);
+
+      // Rediriger vers la page de tableau de bord appropriée
+      if (invitation.role === 'installer') {
+        router.push('/dashboard-installer');
+      } else if (invitation.role === 'user') {
+        router.push('/dashboard-user');
+      } else {
+        router.push('/dashboard');
+      }
+
+      toast.success('Votre compte a été créé avec succès!');
     } catch (error) {
       console.error('Erreur lors de la création du compte:', error);
-      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors de la création du compte');
-    } finally {
+      const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue lors de la création du compte';
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };
-  
-  // Rendu de l'indicateur de force du mot de passe
-  const renderPasswordStrength = () => {
-    if (!password) return null;
-    
-    const strengthLabels = [
-      { label: 'Faible', color: 'bg-red-500' },
-      { label: 'Moyen', color: 'bg-orange-500' },
-      { label: 'Bon', color: 'bg-yellow-500' },
-      { label: 'Fort', color: 'bg-green-500' }
-    ];
-    
-    const currentStrength = strengthLabels[passwordStrength];
-    
+
+  // Afficher un indicateur de chargement pendant la vérification du token
+  if (isVerifying) {
     return (
-      <div className="mt-1">
-        <div className="flex justify-between mb-1">
-          <span className="text-xs">{currentStrength.label}</span>
-          <span className="text-xs">{passwordStrength}/4</span>
-        </div>
-        <div className="h-1 w-full bg-gray-200 rounded-full">
-          <div 
-            className={`h-1 rounded-full ${currentStrength.color}`} 
-            style={{ width: `${(passwordStrength / 4) * 100}%` }}
-          ></div>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <AppLogo className="mb-8" />
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Vérification de l'invitation</CardTitle>
+            <CardDescription>Veuillez patienter pendant que nous vérifions votre invitation...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center py-4">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
-  };
-  
-  // Rendu du contenu principal
-  const renderContent = () => {
-    if (isVerifying) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8 space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <span className="text-center">Vérification de l'invitation...</span>
-        </div>
-      );
-    }
-    
-    if (!isTokenValid || !invitation) {
-      return (
-        <div className="space-y-6">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Invitation invalide</AlertTitle>
-            <AlertDescription>
-              Cette invitation est invalide, a expiré ou a déjà été utilisée.
-            </AlertDescription>
-          </Alert>
-          <Button 
-            className="w-full" 
-            onClick={() => router.push('/login')}
-          >
-            Retour à la page de connexion
-          </Button>
-        </div>
-      );
-    }
-    
+  }
+
+  // Afficher un message d'erreur si le token est invalide
+  if (!isTokenValid || error) {
     return (
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Erreur</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-2">
-          <div className="rounded-lg border p-4 bg-muted/50">
-            <p className="font-medium">Informations de l'invitation</p>
-            <div className="mt-2 space-y-1 text-sm">
-              <p><span className="text-muted-foreground">Nom:</span> {invitation.name}</p>
-              <p><span className="text-muted-foreground">Email:</span> {invitation.email}</p>
-              <p><span className="text-muted-foreground">Rôle:</span> {invitation.role === 'installer' ? 'Installateur' : 'Utilisateur'}</p>
-              {invitation.role === 'installer' && invitation.companyName && (
-                <p><span className="text-muted-foreground">Entreprise:</span> {invitation.companyName}</p>
-              )}
-              <p><span className="text-muted-foreground">Invité par:</span> {invitation.inviterName}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={handlePasswordChange}
-              required
-              disabled={isSubmitting}
-              minLength={8}
-              className="border-input focus:border-primary"
-              placeholder="Minimum 8 caractères"
-            />
-            {renderPasswordStrength()}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              disabled={isSubmitting}
-              minLength={8}
-              className="border-input focus:border-primary"
-              placeholder="Confirmer votre mot de passe"
-            />
-          </div>
-        </div>
-        
-        <Button 
-          type="submit" 
-          className="w-full transition-all" 
-          disabled={isSubmitting || password.length < 8 || password !== confirmPassword}
-        >
-          {isSubmitting ? (
-            <>
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-              Création du compte...
-            </>
-          ) : (
-            <>
-              <UserCheck className="mr-2 h-4 w-4" />
-              Finaliser l'inscription
-            </>
-          )}
-        </Button>
-      </form>
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <AppLogo className="mb-8" />
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Invitation invalide</CardTitle>
+            <CardDescription>Nous n'avons pas pu vérifier votre invitation.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erreur</AlertTitle>
+              <AlertDescription>{error || 'Invitation invalide ou expirée'}</AlertDescription>
+            </Alert>
+            <p className="text-sm text-muted-foreground">
+              Si vous pensez qu'il s'agit d'une erreur, veuillez contacter la personne qui vous a invité ou l'administrateur du système.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Link href="/login" className="w-full">
+              <Button variant="outline" className="w-full">Retour à la page de connexion</Button>
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
     );
-  };
-  
+  }
+
+  // Afficher le formulaire d'inscription
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Toaster />
-      <Card className="w-full max-w-md shadow-lg border-opacity-50">
-        <CardHeader className="space-y-1 pb-6">
-          <div className="flex justify-center mb-4">
-            <AppLogo height={60} />
-          </div>
-          <CardTitle className="text-2xl text-center font-semibold tracking-tight">
-            Finaliser votre inscription
-          </CardTitle>
-          <CardDescription className="text-center">
-            Créez votre mot de passe pour activer votre compte
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <AppLogo className="mb-8" />
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Créer votre compte</CardTitle>
+          <CardDescription>
+            Vous avez été invité par {invitation?.inviterName || 'un administrateur'} à rejoindre {invitation?.inviterCompany || 'la plateforme'} en tant que {invitation?.role === 'installer' ? 'installateur' : 'utilisateur'}.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {renderContent()}
-        </CardContent>
-        <CardFooter className="flex justify-center pt-4 pb-6 border-t">
-          <p className="text-sm text-muted-foreground">
-            <Link
-              href="/login"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              Déjà un compte? Se connecter
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Erreur</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={invitation?.email || ''} disabled />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="name">Nom</Label>
+              <Input id="name" value={invitation?.name || ''} disabled />
+            </div>
+            
+            {invitation?.role === 'installer' && invitation?.companyName && (
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Entreprise</Label>
+                <Input id="companyName" value={invitation.companyName} disabled />
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+              />
+              <div className="mt-1">
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs">Force du mot de passe:</span>
+                  <span className="text-xs">
+                    {passwordStrength === 0 && 'Très faible'}
+                    {passwordStrength === 1 && 'Faible'}
+                    {passwordStrength === 2 && 'Moyen'}
+                    {passwordStrength === 3 && 'Bon'}
+                    {passwordStrength === 4 && 'Fort'}
+                    {passwordStrength === 5 && 'Excellent'}
+                  </span>
+                </div>
+                <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full ${passwordStrength <= 1 ? 'bg-red-500' : passwordStrength <= 2 ? 'bg-orange-500' : passwordStrength <= 3 ? 'bg-yellow-500' : passwordStrength <= 4 ? 'bg-green-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Utilisez au moins 8 caractères avec des lettres majuscules, des chiffres et des caractères spéciaux.
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+              <Input 
+                id="confirmPassword" 
+                type="password" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                required 
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Link href="/login">
+              <Button type="button" variant="outline">Annuler</Button>
             </Link>
-          </p>
-        </CardFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                  Création en cours...
+                </>
+              ) : (
+                <>
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Créer mon compte
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </form>
       </Card>
+      <Toaster />
     </div>
+  );
+}
+
+// Composant principal enveloppé dans Suspense
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <AppLogo className="mb-8" />
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Chargement...</CardTitle>
+            <CardDescription>Veuillez patienter pendant le chargement de la page d'invitation...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center py-4">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
   );
 }
