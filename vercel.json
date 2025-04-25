@@ -7,6 +7,5 @@
   "env": {
     "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "datawatt"
   },
-  "ignoreCommand": "echo 'Skipping linting checks'",
   "installCommand": "npm install"
 }
