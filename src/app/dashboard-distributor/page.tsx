@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLogo } from '@/components/app-logo';
 import { UserProfileMenu } from '@/components/user-profile-menu';
-import { FileText, LayoutDashboard, Store, Users } from 'lucide-react';
+import { FileText, LayoutDashboard, Store, Users, UserPlus } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { DocumentsSection } from '@/components/distributor/documents-section';
 import { AccountsSection } from '@/components/distributor/accounts-section';
+import { TeamManagement } from '@/components/distributor/team-management';
 import { Toaster } from 'sonner';
 
 export default function DistributorDashboardPage() {
@@ -46,7 +47,7 @@ export default function DistributorDashboardPage() {
       const installersQuery = query(
         collection(db, 'users'),
         where('role', '==', 'installer'),
-        where('distributorId', '==', user.uid)
+        where('distributorId', '==', user.id)
       );
       const installersSnapshot = await getDocs(installersQuery);
       setInstallerCount(installersSnapshot.size);
@@ -113,6 +114,14 @@ export default function DistributorDashboardPage() {
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Documents techniques
+              </Button>
+              <Button 
+                variant={activeTab === 'team' ? 'default' : 'ghost'} 
+                className="w-full justify-start" 
+                onClick={() => setActiveTab('team')}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Équipe
               </Button>
               <Button 
                 variant={activeTab === 'accounts' ? 'default' : 'ghost'} 
@@ -198,6 +207,10 @@ export default function DistributorDashboardPage() {
 
             {activeTab === 'documents' && (
               <DocumentsSection />
+            )}
+
+            {activeTab === 'team' && (
+              <TeamManagement />
             )}
 
             {activeTab === 'accounts' && (

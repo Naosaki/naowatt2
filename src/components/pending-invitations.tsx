@@ -1,33 +1,41 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mail, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Clock, AlertCircle, CheckCircle, RefreshCw, Trash } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { db } from '@/lib/firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 export interface Invitation {
   id: string;
   email: string;
   name: string;
-  role: 'installer' | 'user';
+  role: 'distributor' | 'installer' | 'user';
   companyName?: string;
   status: 'pending' | 'accepted' | 'expired';
   createdAt: Date;
   expiresAt: Date;
+  inviterId: string;
+  inviterName: string;
+  token: string;
 }
 
 interface PendingInvitationsProps {
   invitations: Invitation[];
   loading: boolean;
   onResendInvitation?: (invitation: Invitation) => void;
-  onCancelInvitation?: (invitation: Invitation) => void;
+  onRefresh?: () => void;
+  onDelete?: () => void;
 }
 
 export function PendingInvitations({
   invitations,
   loading,
   onResendInvitation,
-  onCancelInvitation
+  onRefresh,
+  onDelete
 }: PendingInvitationsProps) {
   const getStatusBadge = (invitation: Invitation) => {
     if (invitation.status === 'pending') {
@@ -65,11 +73,42 @@ export function PendingInvitations({
     return `Expire ${formatDistanceToNow(expiresAt, { addSuffix: true, locale: fr })}`;
   };
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'distributor':
+        return 'Collaborateur distributeur';
+      case 'installer':
+        return 'Installateur';
+      case 'user':
+        return 'Utilisateur';
+      default:
+        return role;
+    }
+  };
+
+  const handleDeleteInvitation = async (invitation: Invitation) => {
+    try {
+      await deleteDoc(doc(db, 'invitations', invitation.id));
+      toast.success(`L&apos;invitation envoyée à ${invitation.email} a été supprimée.`);
+      if (onDelete) onDelete();
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'invitation:', error);
+      toast.error('Impossible de supprimer l\'invitation. Veuillez réessayer plus tard.');
+    }
+  };
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Invitations en attente</CardTitle>
-        <CardDescription>Liste des invitations envoyées qui n'ont pas encore été acceptées</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Invitations en attente</CardTitle>
+          <CardDescription>Liste des invitations envoyées qui n&apos;ont pas encore été acceptées</CardDescription>
+        </div>
+        {onRefresh && (
+          <Button variant="ghost" size="sm" onClick={onRefresh}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -81,7 +120,7 @@ export function PendingInvitations({
             <div className="text-center">
               <Mail className="mx-auto h-8 w-8 text-muted-foreground" />
               <p className="mt-2 text-muted-foreground">Aucune invitation en attente</p>
-              <p className="text-sm text-muted-foreground">Envoyez des invitations en cliquant sur "Envoyer une invitation"</p>
+              <p className="text-sm text-muted-foreground">Envoyez des invitations en cliquant sur &quot;Envoyer une invitation&quot;</p>
             </div>
           </div>
         ) : (
@@ -103,7 +142,7 @@ export function PendingInvitations({
                     <td className="px-4 py-2">{invitation.name}</td>
                     <td className="px-4 py-2">{invitation.email}</td>
                     <td className="px-4 py-2">
-                      {invitation.role === 'installer' ? 'Installateur' : 'Utilisateur'}
+                      {getRoleLabel(invitation.role)}
                       {invitation.companyName && ` (${invitation.companyName})`}
                     </td>
                     <td className="px-4 py-2">{getStatusBadge(invitation)}</td>
@@ -121,15 +160,13 @@ export function PendingInvitations({
                             Renvoyer
                           </Button>
                         )}
-                        {onCancelInvitation && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => onCancelInvitation(invitation)}
-                          >
-                            Annuler
-                          </Button>
-                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDeleteInvitation(invitation)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>

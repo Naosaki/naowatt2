@@ -52,8 +52,8 @@ export function UserProfileMenu({ user }: UserProfileMenuProps) {
       .toUpperCase();
   };
 
-  const initials = user.displayName 
-    ? getInitials(user.displayName)
+  const initials = user.name 
+    ? getInitials(user.name)
     : user.email 
       ? user.email[0].toUpperCase()
       : 'U';
@@ -77,13 +77,13 @@ export function UserProfileMenu({ user }: UserProfileMenuProps) {
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
           {initials}
         </div>
-        <span className="font-medium">{user.displayName || user.email}</span>
+        <span className="font-medium">{user.name || user.email}</span>
       </button>
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-56 rounded-md border bg-card p-1 shadow-lg z-50">
           <div className="p-2 text-sm font-medium">
-            <div>{user.displayName}</div>
+            <div>{user.name}</div>
             <div className="text-xs text-muted-foreground">{user.email}</div>
             <div className="mt-1">
               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${

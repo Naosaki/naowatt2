@@ -1,15 +1,30 @@
 // User types
 export interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
+  id: string;
+  email: string;
+  name: string;
   role: 'admin' | 'user' | 'distributor' | 'installer';
+  active: boolean;
   createdAt: Date;
-  lastLogin: Date;
+  lastLogin?: Date;
   createdBy?: string; // ID de l'utilisateur qui a créé ce compte
   distributorId?: string; // ID du distributeur associé (pour les installateurs et utilisateurs)
   managedUsers?: string[]; // IDs des utilisateurs gérés par ce distributeur/installateur
+  isDistributorAdmin?: boolean; // Indique si l'utilisateur peut gérer les membres
+}
+
+// Distributor Account type
+export interface DistributorAccount {
+  id: string;
+  name: string;          // Nom de l'entreprise
+  address: string;
+  contactEmail: string;  // Email principal
+  contactPhone: string;
+  logo?: string;         // URL du logo de l'entreprise
+  active: boolean;
+  createdAt: Date;
+  teamMembers: string[]; // IDs des utilisateurs membres de l'équipe
+  adminMembers: string[]; // IDs des utilisateurs avec droits d'administration
 }
 
 // Document types

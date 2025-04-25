@@ -6,18 +6,29 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
 
 interface InviteFormProps {
   onClose: () => void;
   inviterId: string;
   onSuccess?: () => void;
+  isDistributor?: boolean; // Indique si l'inviteur est un distributeur
+  inviteMode?: 'team' | 'accounts'; // Mode d'invitation : équipe ou comptes
 }
 
-export function InviteForm({ onClose, inviterId, onSuccess }: InviteFormProps) {
+export function InviteForm({ onClose, inviterId, onSuccess, inviteMode = 'accounts' }: InviteFormProps) {
+  // Déterminer les rôles disponibles en fonction du mode
+  const isTeamMode = inviteMode === 'team';
+  
+  // Pour le mode équipe, seul le rôle distributeur est disponible
+  // Pour le mode comptes, seuls les rôles installateur et utilisateur sont disponibles
+  const defaultRole = isTeamMode ? 'distributor' : 'installer';
+  
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
-  const [inviteRole, setInviteRole] = useState<'installer' | 'user'>('installer');
+  const [inviteRole, setInviteRole] = useState<'distributor' | 'installer' | 'user'>(defaultRole);
   const [inviteCompanyName, setInviteCompanyName] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +50,8 @@ export function InviteForm({ onClose, inviterId, onSuccess }: InviteFormProps) {
           name: inviteName,
           role: inviteRole,
           companyName: inviteRole === 'installer' ? inviteCompanyName : undefined,
-          inviterId
+          inviterId,
+          isDistributorAdmin: inviteRole === 'distributor' ? isAdmin : undefined
         }),
       });
       
@@ -55,6 +67,7 @@ export function InviteForm({ onClose, inviterId, onSuccess }: InviteFormProps) {
       setInviteEmail('');
       setInviteName('');
       setInviteCompanyName('');
+      setIsAdmin(false);
       
       // Fermer le formulaire et notifier le succès
       onClose();
@@ -68,11 +81,26 @@ export function InviteForm({ onClose, inviterId, onSuccess }: InviteFormProps) {
     }
   };
 
+  // Déterminer le titre et la description en fonction du mode
+  const getTitle = () => {
+    if (isTeamMode) {
+      return "Inviter un collaborateur distributeur";
+    }
+    return "Envoyer une invitation";
+  };
+
+  const getDescription = () => {
+    if (isTeamMode) {
+      return "Invitez un collaborateur à rejoindre votre équipe distributeur";
+    }
+    return "Invitez un installateur ou un utilisateur à rejoindre votre espace";
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Envoyer une invitation</CardTitle>
-        <CardDescription>Invitez un installateur ou un utilisateur à rejoindre votre espace</CardDescription>
+        <CardTitle>{getTitle()}</CardTitle>
+        <CardDescription>{getDescription()}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -82,32 +110,48 @@ export function InviteForm({ onClose, inviterId, onSuccess }: InviteFormProps) {
             </div>
           )}
           
-          <div className="space-y-2">
-            <Label htmlFor="role">Type de compte</Label>
-            <Select 
-              value={inviteRole} 
-              onValueChange={(value: 'installer' | 'user') => setInviteRole(value)}
-            >
-              <SelectTrigger id="role">
-                <SelectValue placeholder="Sélectionner un type de compte" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="installer">Installateur</SelectItem>
-                <SelectItem value="user">Utilisateur</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!isTeamMode && (
+            <div className="space-y-2">
+              <Label htmlFor="role">Type de compte</Label>
+              <Select 
+                value={inviteRole} 
+                onValueChange={(value: 'installer' | 'user') => setInviteRole(value)}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Sélectionner un type de compte" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="installer">Installateur</SelectItem>
+                  <SelectItem value="user">Utilisateur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           {inviteRole === 'installer' && (
             <div className="space-y-2">
-              <Label htmlFor="companyName">Nom de l&apos;entreprise</Label>
+              <Label htmlFor="companyName">Nom de l'entreprise</Label>
               <Input 
                 id="companyName" 
                 value={inviteCompanyName} 
                 onChange={(e) => setInviteCompanyName(e.target.value)} 
                 required 
-                placeholder="Nom de l&apos;entreprise de l&apos;installateur"
+                placeholder="Nom de l'entreprise de l'installateur"
               />
+            </div>
+          )}
+
+          {inviteRole === 'distributor' && (
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="isAdmin" 
+                checked={isAdmin} 
+                onCheckedChange={setIsAdmin} 
+              />
+              <Label htmlFor="isAdmin" className="cursor-pointer">Droits d'administration</Label>
+              <p className="text-xs text-muted-foreground ml-2">
+                Permet de gérer les membres de l'équipe et d'inviter de nouveaux collaborateurs
+              </p>
             </div>
           )}
           
@@ -145,7 +189,7 @@ export function InviteForm({ onClose, inviterId, onSuccess }: InviteFormProps) {
             ) : (
               <>
                 <Mail className="mr-2 h-4 w-4" />
-                Envoyer l&apos;invitation
+                Envoyer l'invitation
               </>
             )}
           </Button>

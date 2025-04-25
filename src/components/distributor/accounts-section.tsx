@@ -42,7 +42,7 @@ export function AccountsSection() {
       // Requête pour trouver tous les utilisateurs créés par ce distributeur
       const usersQuery = query(
         collection(db, 'users'),
-        where('distributorId', '==', user.uid)
+        where('distributorId', '==', user.id)
       );
       
       const querySnapshot = await getDocs(usersQuery);
@@ -51,16 +51,17 @@ export function AccountsSection() {
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
         users.push({
-          uid: doc.id,
+          id: doc.id,
           email: userData.email,
-          displayName: userData.displayName,
-          photoURL: userData.photoURL,
+          name: userData.name,
           role: userData.role,
+          active: userData.active || true,
           createdAt: userData.createdAt?.toDate() || new Date(),
           lastLogin: userData.lastLogin?.toDate() || new Date(),
           createdBy: userData.createdBy,
           distributorId: userData.distributorId,
           managedUsers: userData.managedUsers || [],
+          isDistributorAdmin: userData.isDistributorAdmin || false,
         });
       });
       
@@ -83,7 +84,7 @@ export function AccountsSection() {
       // Requête pour trouver toutes les invitations envoyées par ce distributeur
       const invitationsQuery = query(
         collection(db, 'invitations'),
-        where('inviterId', '==', user.uid)
+        where('inviterId', '==', user.id)
       );
       
       const querySnapshot = await getDocs(invitationsQuery);
@@ -99,14 +100,16 @@ export function AccountsSection() {
           companyName: data.companyName,
           status: data.status || 'pending',
           createdAt: data.createdAt?.toDate() || new Date(),
-          expiresAt: data.expiresAt?.toDate() || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          expiresAt: data.expiresAt?.toDate(),
+          inviterId: data.inviterId,
+          inviterName: data.inviterName,
+          token: data.token,
         });
       });
       
       setPendingInvitations(invitations);
     } catch (error) {
       console.error('Erreur lors du chargement des invitations:', error);
-      setError('Impossible de charger les invitations. Veuillez réessayer plus tard.');
     } finally {
       setLoadingInvitations(false);
     }
@@ -118,12 +121,12 @@ export function AccountsSection() {
     
     try {
       // Supprimer l'utilisateur de Firestore
-      await deleteDoc(doc(db, 'users', userToDelete.uid));
+      await deleteDoc(doc(db, 'users', userToDelete.id));
       
       // Mettre à jour la liste des utilisateurs
-      setManagedUsers(prevUsers => prevUsers.filter(u => u.uid !== userToDelete.uid));
+      setManagedUsers(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
       
-      toast.success('Utilisateur supprimé avec succès');
+      toast.success(`L'utilisateur ${userToDelete.name || userToDelete.email} a été supprimé avec succès.`);
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'utilisateur:', error);
@@ -238,8 +241,8 @@ export function AccountsSection() {
                   {managedUsers
                     .filter(user => user.role === 'installer')
                     .map(installer => (
-                      <tr key={installer.uid} className="border-b">
-                        <td className="p-2">{installer.displayName || 'N/A'}</td>
+                      <tr key={installer.id} className="border-b">
+                        <td className="p-2">{installer.name || installer.email}</td>
                         <td className="p-2">{installer.email}</td>
                         <td className="p-2">
                           {installer.createdAt instanceof Date
@@ -295,8 +298,8 @@ export function AccountsSection() {
                   {managedUsers
                     .filter(user => user.role === 'user')
                     .map(user => (
-                      <tr key={user.uid} className="border-b">
-                        <td className="p-2">{user.displayName || 'N/A'}</td>
+                      <tr key={user.id} className="border-b">
+                        <td className="p-2">{user.name || user.email}</td>
                         <td className="p-2">{user.email}</td>
                         <td className="p-2">
                           {user.createdAt instanceof Date
@@ -339,10 +342,10 @@ export function AccountsSection() {
             </div>
           ) : (
             <PendingInvitations
-              invitations={pendingInvitations}
+              invitations={pendingInvitations.filter(inv => inv.role !== 'distributor')}
               loading={loadingInvitations}
-              onResendInvitation={resendInvitation}
-              onCancelInvitation={cancelInvitation}
+              onRefresh={fetchPendingInvitations}
+              onDelete={() => fetchPendingInvitations()}
             />
           )}
         </TabsContent>
@@ -354,7 +357,7 @@ export function AccountsSection() {
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={() => userToDelete && deleteUser(userToDelete)}
         title="Supprimer l'utilisateur"
-        description={`Êtes-vous sûr de vouloir supprimer ${userToDelete?.displayName || userToDelete?.email || 'cet utilisateur'} ? Cette action est irréversible.`}
+        description={`Êtes-vous sûr de vouloir supprimer l'utilisateur ${userToDelete?.name || userToDelete?.email} ? Cette action est irréversible.`}
         confirmText="Supprimer"
         cancelText="Annuler"
         variant="destructive"
@@ -364,7 +367,8 @@ export function AccountsSection() {
       {showInviteForm && (
         <InviteForm
           onClose={() => setShowInviteForm(false)}
-          inviterId={user?.uid || ''}
+          inviterId={user?.id || ''}
+          inviteMode="accounts"
           onSuccess={() => {
             setShowInviteForm(false);
             fetchPendingInvitations();

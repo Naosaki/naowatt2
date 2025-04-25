@@ -10,7 +10,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<User>;
-  signUp: (email: string, password: string, displayName: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser?: boolean) => Promise<void>;
+  signUp: (email: string, password: string, name: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -30,13 +30,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Convert Firestore timestamp to Date
             const userData = userDoc.data();
             const user: User = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-              role: userData.role,
+              id: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              name: firebaseUser.displayName || userData.name || '',
+              role: userData.role || 'user',
+              active: userData.active !== false, // Par défaut actif si non spécifié
               createdAt: userData.createdAt?.toDate() || new Date(),
               lastLogin: userData.lastLogin?.toDate() || new Date(),
+              createdBy: userData.createdBy,
+              distributorId: userData.distributorId,
+              managedUsers: userData.managedUsers,
+              isDistributorAdmin: userData.isDistributorAdmin || false
             };
             setUser(user);
             
@@ -80,11 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('Creating user document in Firestore for new user');
           // Si l'utilisateur n'existe pas dans Firestore, créons-le avec un rôle par défaut
           const newUser: User = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
+            id: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || '',
             role: 'user', // Rôle par défaut
+            active: true,
             createdAt: new Date(),
             lastLogin: new Date(),
           };
@@ -99,93 +103,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return newUser;
         }
         
+        // L'utilisateur existe dans Firestore, récupérer ses données
         const userData = userDoc.data();
-        console.log('User data retrieved:', userData);
-        
-        // Vérifier si les champs de date existent et sont des timestamps Firestore
-        const createdAt = userData.createdAt ? 
-          (typeof userData.createdAt.toDate === 'function' ? userData.createdAt.toDate() : new Date()) : 
-          new Date();
-          
-        const lastLogin = userData.lastLogin ? 
-          (typeof userData.lastLogin.toDate === 'function' ? userData.lastLogin.toDate() : new Date()) : 
-          new Date();
-        
         const user: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName || userData.displayName || null,
-          photoURL: firebaseUser.photoURL || userData.photoURL || null,
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || userData.name || '',
           role: userData.role || 'user',
-          createdAt: createdAt,
-          lastLogin: lastLogin,
+          active: userData.active !== false,
+          createdAt: userData.createdAt?.toDate() || new Date(),
+          lastLogin: new Date(),
+          createdBy: userData.createdBy,
+          distributorId: userData.distributorId,
+          managedUsers: userData.managedUsers,
+          isDistributorAdmin: userData.isDistributorAdmin || false
         };
         
-        // Mettre à jour la dernière connexion
+        // Mettre à jour la date de dernière connexion
         await setDoc(doc(db, 'users', firebaseUser.uid), {
           lastLogin: serverTimestamp()
         }, { merge: true });
         
-        console.log('User object created successfully:', user);
         return user;
       } catch (firestoreError) {
-        console.error('Error retrieving user data from Firestore:', firestoreError);
-        // En cas d'erreur Firestore, retourner quand même un utilisateur avec des valeurs par défaut
-        return {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-          role: 'user', // Rôle par défaut
-          createdAt: new Date(),
-          lastLogin: new Date(),
-        };
+        console.error('Error retrieving/creating user document in Firestore:', firestoreError);
+        throw firestoreError;
       }
-    } catch (error) {
-      console.error('Error signing in:', error);
-      throw error;
+    } catch (authError) {
+      console.error('Firebase authentication error:', authError);
+      throw authError;
     }
   };
 
-  const signUp = async (email: string, password: string, displayName: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser: boolean = false) => {
+  const signUp = async (email: string, password: string, name: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser = false) => {
+    if (!keepCurrentUser) {
+      // If we're not keeping the current user, sign out first
+      await firebaseSignOut(auth);
+    }
+    
     try {
-      // Sauvegarder l'utilisateur actuel si keepCurrentUser est true
-      const currentUser = auth.currentUser;
-      const currentUserEmail = currentUser?.email;
-      const currentUserPassword = keepCurrentUser ? sessionStorage.getItem('tempPassword') || '' : '';
-      
-      // Créer le nouvel utilisateur
+      // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       
       // Create user document in Firestore
-      await setDoc(doc(db, 'users', firebaseUser.uid), {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: displayName,
-        photoURL: null,
+      const newUser: User = {
+        id: firebaseUser.uid,
+        email: email,
+        name: name,
         role: role,
+        active: true,
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        distributorId: distributorId
+      };
+      
+      await setDoc(doc(db, 'users', firebaseUser.uid), {
+        ...newUser,
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
-        createdBy: user?.uid || null, // L'utilisateur actuel qui créé ce compte
-        distributorId: role === 'distributor' ? null : distributorId, // Associer au distributeur si applicable
-        managedUsers: [],
       });
-
-      // Si l'utilisateur actuel est un distributeur et qu'il créé un installateur ou un utilisateur
-      if (user?.role === 'distributor' && (role === 'installer' || role === 'user')) {
-        // Ajouter l'ID du nouvel utilisateur à la liste des utilisateurs gérés par ce distributeur
-        await setDoc(doc(db, 'users', user.uid), {
-          managedUsers: [...(user.managedUsers || []), firebaseUser.uid]
-        }, { merge: true });
-      }
       
-      // Si on doit conserver l'utilisateur actuel, se reconnecter avec ses identifiants
-      if (keepCurrentUser && currentUserEmail && currentUserPassword) {
-        await signInWithEmailAndPassword(auth, currentUserEmail, currentUserPassword);
+      // If we're keeping the current user, sign back in as them
+      if (keepCurrentUser && user) {
+        await firebaseSignOut(auth);
+        // We don't actually sign back in here, as the admin would need to provide their password
+        // Instead, we rely on the UI to prompt for re-authentication if needed
       }
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.error('Error creating new user:', error);
       throw error;
     }
   };
@@ -193,6 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
+      setUser(null);
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;

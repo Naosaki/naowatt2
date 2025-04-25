@@ -111,7 +111,7 @@ function UserDashboardContent() {
       // Utiliser une requête plus simple qui ne nécessite pas d'index composite
       const historyQuery = query(
         collection(db, 'downloadHistory'),
-        where('userId', '==', user.uid)
+        where('userId', '==', user.id)
         // Suppression du orderBy pour éviter le besoin d'un index composite
       );
       
@@ -444,17 +444,12 @@ function UserDashboardContent() {
         return;
       }
       
-      // Vérifier si l'utilisateur est un utilisateur standard
-      if (user.role !== 'user') {
-        router.push('/dashboard'); // Rediriger vers le tableau de bord principal
-      } else {
-        // Charger les documents récents
-        fetchRecentDocuments();
-        fetchDownloadHistory();
-        fetchCategories();
-        fetchProductTypes();
-        fetchLanguages();
-      }
+      // Charger les données pour tous les utilisateurs qui accèdent à cette page
+      fetchRecentDocuments();
+      fetchDownloadHistory();
+      fetchCategories();
+      fetchProductTypes();
+      fetchLanguages();
     }
   }, [user, loading, router, fetchRecentDocuments, fetchDownloadHistory, fetchCategories, fetchProductTypes, fetchLanguages]);
 
@@ -544,7 +539,7 @@ function UserDashboardContent() {
     try {
       // Ajouter à Firestore via API
       const downloadData = {
-        userId: user.uid,
+        userId: user.id,
         documentId: document.id,
         downloadedAt: new Date(),
         userEmail: user.email,
