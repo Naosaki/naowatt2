@@ -18,11 +18,12 @@ import { User, Document as DocumentType, Category, ProductType, Language, AppSet
 import { UserProfileMenu } from '@/components/user-profile-menu';
 import { CategoryManagement } from '@/components/admin/category-management';
 import { ProductTypeManagement } from '@/components/admin/product-type-management';
+import ProductManagement from '@/components/admin/product-management';
 import { LanguageManagement } from '@/components/admin/language-management';
 import { AppSettingsManagement } from '@/components/admin/app-settings-management';
 import { EmailManagement } from '@/components/admin/email-management/email-management';
 import { DashboardOverview } from '@/components/admin/dashboard-overview';
-import { Eye, FileEdit, Trash2, Box, Settings, Globe, BarChart, Mail } from 'lucide-react';
+import { Eye, FileEdit, Trash2, Box, Settings, Globe, BarChart, Mail, Package } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AppLogo } from '@/components/app-logo';
 
@@ -526,6 +527,14 @@ export default function AdminPage() {
               Types de produits
             </Button>
             <Button 
+              variant={activeTab === 'products' ? 'default' : 'ghost'} 
+              className="w-full justify-start" 
+              onClick={() => setActiveTab('products')}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Produits
+            </Button>
+            <Button 
               variant={activeTab === 'languages' ? 'default' : 'ghost'} 
               className="w-full justify-start" 
               onClick={() => setActiveTab('languages')}
@@ -731,6 +740,10 @@ export default function AdminPage() {
 
           {activeTab === 'productTypes' && (
             <ProductTypeManagement />
+          )}
+          
+          {activeTab === 'products' && (
+            <ProductManagement />
           )}
           
           {activeTab === 'languages' && (

@@ -27,6 +27,7 @@ export interface Document {
   language: string;
   accessRoles: ('admin' | 'user' | 'distributor' | 'installer')[];
   version: string;
+  productId?: string;
 }
 
 // Download history

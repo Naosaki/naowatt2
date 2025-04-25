@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,10 +24,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, where, orderBy } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import { Category, ProductType, Language } from '@/lib/types';
+import { Category, Language } from '@/lib/types';
+import { Product } from '@/types/product';
 
 interface AddDocumentDialogProps {
   onDocumentAdded?: () => void;
@@ -41,7 +42,7 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [productType, setProductType] = useState('');
+  const [productId, setProductId] = useState('');
   const [language, setLanguage] = useState('');
   const [version, setVersion] = useState('');
   const [accessRoles, setAccessRoles] = useState<UserRole[]>(['admin']);
@@ -49,8 +50,10 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
+  const [products, setProducts] = useState<(Product & { id: string })[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
+  const [selectedProductType, setSelectedProductType] = useState('');
+  const [productTypes, setProductTypes] = useState<{ id: string; name: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Charger les catégories existantes
@@ -77,13 +80,13 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
   const fetchProductTypes = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'productTypes'));
-      const productTypesList: ProductType[] = [];
+      const productTypesList: { id: string; name: string }[] = [];
       
       querySnapshot.forEach((doc) => {
-        const productTypeData = doc.data() as ProductType;
+        const productTypeData = doc.data();
         productTypesList.push({
-          ...productTypeData,
           id: doc.id,
+          name: productTypeData.name,
         });
       });
       
@@ -92,6 +95,45 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
       console.error('Erreur lors du chargement des types de produits:', error);
     }
   };
+
+  // Charger les produits en fonction du type de produit sélectionné
+  const fetchProducts = async (productTypeId: string) => {
+    if (!productTypeId) {
+      setProducts([]);
+      return;
+    }
+    
+    try {
+      const q = query(
+        collection(db, 'products'),
+        where('productTypeId', '==', productTypeId),
+        where('active', '==', true),
+        orderBy('name')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const productsList: (Product & { id: string })[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const productData = doc.data() as Product;
+        productsList.push({
+          ...productData,
+          id: doc.id,
+        });
+      });
+      
+      setProducts(productsList);
+    } catch (error) {
+      console.error('Erreur lors du chargement des produits:', error);
+    }
+  };
+
+  // Effet pour charger les produits lorsque le type de produit change
+  useEffect(() => {
+    if (selectedProductType) {
+      fetchProducts(selectedProductType);
+    }
+  }, [selectedProductType]);
 
   // Charger les langues existantes
   const fetchLanguages = async () => {
@@ -120,6 +162,21 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
       fetchCategories();
       fetchProductTypes();
       fetchLanguages();
+    } else {
+      // Réinitialiser les champs lors de la fermeture
+      setName('');
+      setDescription('');
+      setCategory('');
+      setSelectedProductType('');
+      setProductId('');
+      setLanguage('');
+      setVersion('');
+      setAccessRoles(['admin']);
+      setFile(null);
+      setUploadProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -149,13 +206,13 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
       return;
     }
 
-    if (!name || !category || !language) {
+    if (!name || !category || !language || !productId) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
 
     if (accessRoles.length === 0) {
-      toast.error('Veuillez sélectionner au moins un rôle d&apos;accès');
+      toast.error('Veuillez sélectionner au moins un rôle d\'accès');
       return;
     }
 
@@ -178,8 +235,8 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
         }, 
         (error) => {
           // Erreur pendant l'upload
-          console.error('Erreur lors de l&apos;upload:', error);
-          toast.error('Erreur lors de l&apos;upload du fichier');
+          console.error('Erreur lors de l\'upload:', error);
+          toast.error('Erreur lors de l\'upload du fichier');
           setIsLoading(false);
         }, 
         async () => {
@@ -193,18 +250,20 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
             
             await setDoc(doc(db, 'documents', documentId), {
               id: documentId,
-              name,
+              title: name,
               description,
               fileUrl: downloadURL,
+              fileName: file.name,
               fileType,
               fileSize: file.size,
               uploadedBy: user?.uid,
-              uploadedAt: serverTimestamp(),
-              category,
-              productType,
-              language,
+              uploadedAt: timestamp,
+              categoryId: category,
+              productId: productId,
+              languageId: language,
               accessRoles,
               version: version || '1.0',
+              active: true
             });
             
             toast.success('Document ajouté avec succès');
@@ -213,7 +272,8 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
             setName('');
             setDescription('');
             setCategory('');
-            setProductType('');
+            setSelectedProductType('');
+            setProductId('');
             setLanguage('');
             setVersion('');
             setAccessRoles(['admin']);
@@ -238,8 +298,8 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
         }
       );
     } catch (error) {
-      console.error('Erreur lors de l&apos;upload:', error);
-      toast.error('Erreur lors de l&apos;upload du fichier');
+      console.error('Erreur lors de l\'upload:', error);
+      toast.error('Erreur lors de l\'upload du fichier');
       setIsLoading(false);
     }
   };
@@ -306,7 +366,7 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
                     <>
                       <SelectItem value="datasheet">Datasheet</SelectItem>
                       <SelectItem value="certification">Certification</SelectItem>
-                      <SelectItem value="manual">Manuel d&apos;utilisation</SelectItem>
+                      <SelectItem value="manual">Manuel d'utilisation</SelectItem>
                       <SelectItem value="warranty">Garantie</SelectItem>
                     </>
                   )}
@@ -320,25 +380,40 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
               Type de produit <span className="text-red-500">*</span>
             </Label>
             <div className="col-span-3 flex gap-2">
-              <Select value={productType} onValueChange={setProductType}>
+              <Select value={selectedProductType} onValueChange={setSelectedProductType}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner un type de produit" />
                 </SelectTrigger>
                 <SelectContent>
-                  {productTypes.length > 0 ? (
-                    productTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <>
-                      <SelectItem value="solar_panel">Panneau solaire</SelectItem>
-                      <SelectItem value="inverter">Onduleur</SelectItem>
-                      <SelectItem value="battery">Batterie</SelectItem>
-                      <SelectItem value="dtu">DTU</SelectItem>
-                    </>
-                  )}
+                  {productTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="product" className="text-right">
+              Produit <span className="text-red-500">*</span>
+            </Label>
+            <div className="col-span-3 flex gap-2">
+              <Select 
+                value={productId} 
+                onValueChange={setProductId}
+                disabled={!selectedProductType || products.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={!selectedProductType ? "Sélectionnez d'abord un type de produit" : products.length === 0 ? "Aucun produit disponible" : "Sélectionner un produit"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name} {product.reference ? `(${product.reference})` : ''}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -366,6 +441,7 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
                       <SelectItem value="en">Anglais</SelectItem>
                       <SelectItem value="de">Allemand</SelectItem>
                       <SelectItem value="es">Espagnol</SelectItem>
+                      <SelectItem value="it">Italien</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -387,88 +463,87 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
           </div>
           
           <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">
-              Accès <span className="text-red-500">*</span>
+            <Label htmlFor="roles" className="text-right">
+              Rôles d&apos;accès
             </Label>
             <div className="col-span-3 flex flex-wrap gap-2">
-              <Button 
-                type="button" 
-                variant={accessRoles.includes('admin') ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleRoleToggle('admin')}
-                className="rounded-full"
-              >
-                Admin
-              </Button>
-              <Button 
-                type="button" 
-                variant={accessRoles.includes('distributor') ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleRoleToggle('distributor')}
-                className="rounded-full"
-              >
-                Distributeur
-              </Button>
-              <Button 
-                type="button" 
-                variant={accessRoles.includes('installer') ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleRoleToggle('installer')}
-                className="rounded-full"
-              >
-                Installateur
-              </Button>
-              <Button 
-                type="button" 
-                variant={accessRoles.includes('user') ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleRoleToggle('user')}
-                className="rounded-full"
-              >
-                Utilisateur
-              </Button>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="role-admin"
+                  checked={accessRoles.includes('admin')}
+                  onChange={() => handleRoleToggle('admin')}
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="role-admin">Admin</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="role-distributor"
+                  checked={accessRoles.includes('distributor')}
+                  onChange={() => handleRoleToggle('distributor')}
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="role-distributor">Distributeur</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="role-installer"
+                  checked={accessRoles.includes('installer')}
+                  onChange={() => handleRoleToggle('installer')}
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="role-installer">Installateur</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="role-user"
+                  checked={accessRoles.includes('user')}
+                  onChange={() => handleRoleToggle('user')}
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="role-user">Utilisateur</label>
+              </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="file" className="text-right">
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="file" className="text-right pt-2">
               Fichier <span className="text-red-500">*</span>
             </Label>
             <div className="col-span-3">
               <FileInput
-                id="file"
-                value={file}
                 onChange={handleFileChange}
-                required
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"
+                value={file}
               />
+              <input type="file" ref={fileInputRef} style={{ display: 'none' }} />
             </div>
           </div>
           
-          {isLoading && uploadProgress > 0 && (
+          {uploadProgress > 0 && uploadProgress < 100 && (
             <div className="grid grid-cols-4 items-center gap-4">
-              <div className="text-right text-sm">Progression:</div>
-              <div className="col-span-3">
-                <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary" 
+              <div className="col-start-2 col-span-3">
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className="bg-primary h-2.5 rounded-full"
                     style={{ width: `${uploadProgress}%` }}
-                  />
+                  ></div>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {Math.round(uploadProgress)}% terminé
-                </p>
+                <p className="text-sm text-gray-500 mt-1">{Math.round(uploadProgress)}% téléchargé</p>
               </div>
             </div>
           )}
         </div>
         
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
             Annuler
           </Button>
-          <Button type="button" onClick={handleUpload} disabled={isLoading}>
-            {isLoading ? 'Téléchargement...' : 'Télécharger'}
+          <Button onClick={handleUpload} disabled={isLoading}>
+            {isLoading ? 'Téléchargement en cours...' : 'Télécharger'}
           </Button>
         </DialogFooter>
       </DialogContent>
