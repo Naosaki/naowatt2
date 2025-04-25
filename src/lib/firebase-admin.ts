@@ -1,4 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Configuration pour Firebase Admin SDK
 export function initAdmin() {
@@ -46,3 +48,10 @@ export function initAdmin() {
     throw error;
   }
 }
+
+// Initialiser Firebase Admin
+initAdmin();
+
+// Exporter les services Firebase Admin
+export const adminAuth = getAuth();
+export const adminDb = getFirestore();
