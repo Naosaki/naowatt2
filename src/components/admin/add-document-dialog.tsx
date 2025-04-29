@@ -81,7 +81,10 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
   // Charger les types de produits existants
   const fetchProductTypes = async () => {
     try {
+      console.log('Chargement des types de produits...');
       const querySnapshot = await getDocs(collection(db, 'productTypes'));
+      console.log('Nombre de types de produits trouvés:', querySnapshot.size);
+      
       const productTypesList: { id: string; name: string }[] = [];
       
       querySnapshot.forEach((doc) => {
@@ -90,6 +93,7 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
           id: doc.id,
           name: productTypeData.name,
         });
+        console.log('Type de produit trouvé:', doc.id, productTypeData.name);
       });
       
       setProductTypes(productTypesList);
@@ -106,6 +110,13 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
     }
     
     try {
+      console.log('Chargement des produits pour le type:', productTypeId);
+      
+      // Vérifions d'abord si la collection products existe
+      const productsCollectionRef = collection(db, 'products');
+      const testSnapshot = await getDocs(productsCollectionRef);
+      console.log('Collection products existe avec', testSnapshot.size, 'documents');
+      
       const q = query(
         collection(db, 'products'),
         where('productTypeId', '==', productTypeId),
@@ -114,6 +125,8 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
       );
       
       const querySnapshot = await getDocs(q);
+      console.log('Nombre de produits trouvés:', querySnapshot.size);
+      
       const productsList: (Product & { id: string })[] = [];
       
       querySnapshot.forEach((doc) => {
@@ -122,6 +135,7 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
           ...productData,
           id: doc.id,
         });
+        console.log('Produit trouvé:', doc.id, productData.name);
       });
       
       setProducts(productsList);
