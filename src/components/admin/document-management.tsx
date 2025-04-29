@@ -9,35 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Search, FileText, Download, Plus } from 'lucide-react';
+import { Trash2, Search, Download, Plus, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { AddDocumentDialog } from './add-document-dialog';
+import { EditDocumentDialog } from './edit-document-dialog';
+import { Document, Category, ProductType, Language } from '@/lib/types';
 
-// Définition des interfaces
-interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt: Timestamp;
-}
-
-interface ProductType {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt: Timestamp;
-}
-
-interface Language {
-  id: string;
-  name: string;
-  code: string;
-  createdAt: Timestamp;
-}
-
-interface Document {
+// Définition des interfaces locales pour la compatibilité
+interface LocalDocument {
   id: string;
   name: string;
   description?: string;
@@ -50,11 +31,37 @@ interface Document {
   fileType: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  // Propriétés supplémentaires pour la compatibilité avec le type Document de @/lib/types
+  uploadedBy?: string;
+  uploadedAt?: Date;
+  accessRoles?: ('admin' | 'user' | 'distributor' | 'installer')[];
+  version?: string;
+  productId?: string;
 }
 
+// Fonctions de conversion entre les types
+const localToLibDocument = (doc: LocalDocument): Document => {
+  return {
+    id: doc.id,
+    name: doc.name,
+    description: doc.description || '',
+    fileUrl: doc.fileUrl,
+    fileType: doc.fileType,
+    fileSize: doc.fileSize,
+    uploadedBy: doc.uploadedBy || 'admin',
+    uploadedAt: doc.createdAt?.toDate() || new Date(),
+    category: doc.category,
+    productType: doc.productType,
+    language: doc.language,
+    accessRoles: doc.accessRoles || ['admin'],
+    version: doc.version || '1.0',
+    productId: doc.productId
+  };
+};
+
 export default function DocumentManagement() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<LocalDocument[]>([]);
+  const [filteredDocuments, setFilteredDocuments] = useState<LocalDocument[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -65,8 +72,10 @@ export default function DocumentManagement() {
   
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [documentToDelete, setDocumentToDelete] = useState<LocalDocument | null>(null);
   const [showAddDocumentDialog, setShowAddDocumentDialog] = useState(false);
+  const [showEditDocumentDialog, setShowEditDocumentDialog] = useState(false);
+  const [documentToEdit, setDocumentToEdit] = useState<Document | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -119,8 +128,9 @@ export default function DocumentManagement() {
         categoriesList.push({
           id: doc.id,
           name: categoryData.name,
-          description: categoryData.description,
-          createdAt: categoryData.createdAt,
+          description: categoryData.description || '',
+          createdAt: categoryData.createdAt?.toDate() || new Date(),
+          accessRoles: categoryData.accessRoles || ['admin']
         });
       });
       
@@ -141,8 +151,9 @@ export default function DocumentManagement() {
         productTypesList.push({
           id: doc.id,
           name: productTypeData.name,
-          description: productTypeData.description,
-          createdAt: productTypeData.createdAt,
+          description: productTypeData.description || '',
+          createdAt: productTypeData.createdAt?.toDate() || new Date(),
+          accessRoles: productTypeData.accessRoles || ['admin']
         });
       });
       
@@ -164,7 +175,9 @@ export default function DocumentManagement() {
           id: doc.id,
           name: languageData.name,
           code: languageData.code,
-          createdAt: languageData.createdAt,
+          createdAt: languageData.createdAt?.toDate() || new Date(),
+          isDefault: languageData.isDefault || false,
+          accessRoles: languageData.accessRoles || ['admin']
         });
       });
       
@@ -180,22 +193,28 @@ export default function DocumentManagement() {
       const documentsQuery = query(collection(db, 'documents'));
       const querySnapshot = await getDocs(documentsQuery);
       
-      const documentsList: Document[] = [];
+      const documentsList: LocalDocument[] = [];
       querySnapshot.forEach((doc) => {
         const documentData = doc.data();
         documentsList.push({
           id: doc.id,
-          name: documentData.name,
+          name: documentData.name || documentData.title || 'Sans nom', // Compatibilité avec les anciens documents
           description: documentData.description,
-          category: documentData.category,
-          productType: documentData.productType,
-          language: documentData.language,
+          category: documentData.category || documentData.categoryId || '',
+          productType: documentData.productType || documentData.productTypeId || '',
+          language: documentData.language || documentData.languageId || '',
           fileUrl: documentData.fileUrl,
           fileName: documentData.fileName,
           fileSize: documentData.fileSize,
           fileType: documentData.fileType,
-          createdAt: documentData.createdAt,
-          updatedAt: documentData.updatedAt,
+          createdAt: documentData.createdAt || documentData.uploadedAt,
+          updatedAt: documentData.updatedAt || documentData.uploadedAt,
+          // Champs supplémentaires pour la compatibilité
+          uploadedBy: documentData.uploadedBy,
+          uploadedAt: documentData.uploadedAt?.toDate ? documentData.uploadedAt.toDate() : new Date(documentData.uploadedAt),
+          accessRoles: documentData.accessRoles,
+          version: documentData.version,
+          productId: documentData.productId
         });
       });
       
@@ -255,6 +274,15 @@ export default function DocumentManagement() {
     } finally {
       setShowDeleteConfirm(false);
       setDocumentToDelete(null);
+    }
+  };
+
+  const handleEditDocument = (documentId: string) => {
+    const docToEdit = documents.find(doc => doc.id === documentId);
+    if (docToEdit) {
+      // Convertir le document local en type Document de @/lib/types
+      setDocumentToEdit(localToLibDocument(docToEdit));
+      setShowEditDocumentDialog(true);
     }
   };
 
@@ -386,16 +414,16 @@ export default function DocumentManagement() {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => window.open(document.fileUrl, '_blank')}
+                            onClick={() => handleDeleteDocument(document.id)}
                           >
-                            <FileText className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => handleDeleteDocument(document.id)}
+                            onClick={() => handleEditDocument(document.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
@@ -434,6 +462,13 @@ export default function DocumentManagement() {
         open={showAddDocumentDialog}
         onOpenChange={setShowAddDocumentDialog}
         onDocumentAdded={() => fetchDocuments()}
+      />
+
+      <EditDocumentDialog
+        document={documentToEdit}
+        isOpen={showEditDocumentDialog}
+        onClose={() => setShowEditDocumentDialog(false)}
+        onDocumentUpdated={() => fetchDocuments()}
       />
     </div>
   );

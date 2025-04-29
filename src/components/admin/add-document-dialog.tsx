@@ -299,20 +299,23 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
             
             await setDoc(docRef, {
               id: documentId,
-              title: name,
+              name: name,
               description,
               fileUrl: downloadURL,
               fileName: file.name,
               fileType,
               fileSize: file.size,
-              uploadedBy: user?.id,
-              uploadedAt: timestamp,
-              categoryId: category,
+              uploadedBy: user?.id || 'admin',
+              uploadedAt: new Date(timestamp),
+              category: category,
+              productType: selectedProductType,
               productId: productId,
-              languageId: language,
+              language: language,
               accessRoles,
               version: version || '1.0',
-              active: true
+              active: true,
+              createdAt: new Date(timestamp),
+              updatedAt: new Date(timestamp)
             });
             
             toast.success('Document ajouté avec succès');
