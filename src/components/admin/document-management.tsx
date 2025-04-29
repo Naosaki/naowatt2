@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Search, FileText, Download } from 'lucide-react';
+import { Trash2, Search, FileText, Download, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -279,7 +279,11 @@ export default function DocumentManagement() {
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          {/* Titre supprimé */}
+          <CardTitle>Gestion des documents</CardTitle>
+          <Button size="sm" onClick={() => window.location.href = '/admin/upload-document'}>
+            <Plus className="mr-2 h-4 w-4" />
+            Ajouter un document
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
