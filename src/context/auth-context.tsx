@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut as firebaseSignOut, createUserWithEmailAndPassword, updatePassword, EmailAuthProvider, reauthenticateWithCredential, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { User } from '@/lib/types';
 
@@ -12,6 +12,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, name: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUserName: (name: string) => Promise<void>;
+  updateUserPassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -136,9 +138,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string, role: 'admin' | 'user' | 'distributor' | 'installer', distributorId?: string, keepCurrentUser = false) => {
-    if (!keepCurrentUser) {
-      // If we're not keeping the current user, sign out first
-      await firebaseSignOut(auth);
+    if (keepCurrentUser && user) {
+      // Nous ne pouvons pas obtenir le mot de passe de l'utilisateur actuel depuis Firebase
+      // Cette approche ne fonctionnera pas sans demander le mot de passe à l'utilisateur
+      console.log('Tentative de création d\'utilisateur tout en conservant l\'utilisateur actuel');
     }
     
     try {
@@ -155,8 +158,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         active: true,
         createdAt: new Date(),
         lastLogin: new Date(),
-        distributorId: distributorId
       };
+      
+      // Ajouter distributorId seulement s'il est défini
+      if (distributorId) {
+        newUser.distributorId = distributorId;
+      }
       
       await setDoc(doc(db, 'users', firebaseUser.uid), {
         ...newUser,
@@ -164,11 +171,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastLogin: serverTimestamp(),
       });
       
-      // If we're keeping the current user, sign back in as them
+      // Si nous voulons garder l'utilisateur actuel, nous devons le déconnecter et le reconnecter
       if (keepCurrentUser && user) {
+        // Déconnecter l'utilisateur qui vient d'être créé
         await firebaseSignOut(auth);
-        // We don't actually sign back in here, as the admin would need to provide their password
-        // Instead, we rely on the UI to prompt for re-authentication if needed
+        
+        // Nous ne pouvons pas reconnecter l'utilisateur actuel sans son mot de passe
+        // Nous devons informer l'utilisateur qu'il doit se reconnecter manuellement
+        console.log('L\'utilisateur a été créé avec succès, mais l\'administrateur doit se reconnecter manuellement');
       }
     } catch (error) {
       console.error('Error creating new user:', error);
@@ -186,12 +196,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserName = async (name: string) => {
+    try {
+      if (user) {
+        await updateProfile(auth.currentUser!, { displayName: name });
+        await setDoc(doc(db, 'users', user.id), { name }, { merge: true });
+      } else {
+        console.error('User is not signed in');
+      }
+    } catch (error) {
+      console.error('Error updating user name:', error);
+      throw error;
+    }
+  };
+
+  const updateUserPassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      if (user) {
+        const userCredential = await reauthenticateWithCredential(auth.currentUser!, EmailAuthProvider.credential(user.email, currentPassword));
+        await updatePassword(userCredential.user, newPassword);
+      } else {
+        console.error('User is not signed in');
+      }
+    } catch (error) {
+      console.error('Error updating user password:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     loading,
     signIn,
     signUp,
     signOut,
+    updateUserName,
+    updateUserPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

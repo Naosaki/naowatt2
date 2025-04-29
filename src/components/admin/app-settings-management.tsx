@@ -19,6 +19,7 @@ export function AppSettingsManagement() {
   const [saving, setSaving] = useState(false);
   const [appName, setAppName] = useState('');
   const [footerText, setFooterText] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
   const [logoLightFile, setLogoLightFile] = useState<File | null>(null);
   const [logoDarkFile, setLogoDarkFile] = useState<File | null>(null);
   const [logoLightPreview, setLogoLightPreview] = useState('');
@@ -37,6 +38,7 @@ export function AppSettingsManagement() {
           const settingsData = settingsDoc.data() as AppSettings;
           setAppName(settingsData.appName || 'DataWatt');
           setFooterText(settingsData.footerText || 'DataWatt - Solar Panel Documentation Portal');
+          setWebsiteUrl(settingsData.websiteUrl || '');
           setLogoLightPreview(settingsData.logoLightMode || '');
           setLogoDarkPreview(settingsData.logoDarkMode || '');
         } else {
@@ -144,10 +146,11 @@ export function AppSettingsManagement() {
         id: 'app_settings',
         appName,
         footerText,
+        websiteUrl,
         logoLightMode: logoLightURL,
         logoDarkMode: logoDarkURL,
         updatedAt: new Date(),
-        updatedBy: user.uid,
+        updatedBy: user.id,
       };
 
       await setDoc(doc(db, 'settings', 'app_settings'), updatedSettings);
@@ -205,6 +208,19 @@ export function AppSettingsManagement() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Ce texte sera affiché dans le footer de l&apos;application. L&apos;année sera automatiquement ajoutée avant le texte.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="websiteUrl">URL du site web</Label>
+                <Input
+                  id="websiteUrl"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  placeholder="URL du site web"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cette URL sera utilisée pour le lien &quot;Retour au site&quot; dans le pied de page de la page d&apos;accueil.
                 </p>
               </div>
               

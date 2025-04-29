@@ -17,14 +17,17 @@ export interface User {
 export interface DistributorAccount {
   id: string;
   name: string;          // Nom de l'entreprise
+  companyName?: string;  // Nouveau champ utilisé dans le dashboard distributeur
   address: string;
   contactEmail: string;  // Email principal
   contactPhone: string;
   logo?: string;         // URL du logo de l'entreprise
+  logoUrl?: string;      // Nouveau champ utilisé dans le dashboard distributeur
   active: boolean;
   createdAt: Date;
   teamMembers: string[]; // IDs des utilisateurs membres de l'équipe
   adminMembers: string[]; // IDs des utilisateurs avec droits d'administration
+  teamMemberCount?: number; // Nombre de membres d'équipe (calculé dynamiquement)
 }
 
 // Document types
@@ -94,6 +97,7 @@ export interface AppSettings {
   logoDarkMode: string;  // URL du logo pour le mode sombre
   appName: string;       // Nom de l'application
   footerText: string;    // Texte personnalisé pour le footer
+  websiteUrl?: string;   // URL du site web pour le lien "Retour au site"
   updatedAt: Date;       // Date de dernière mise à jour
   updatedBy: string;     // ID de l'utilisateur qui a fait la mise à jour
 }

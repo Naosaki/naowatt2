@@ -5,8 +5,8 @@ import { useAuth } from '@/context/auth-context';
 import { User } from '@/lib/types';
 import { Settings, LogOut } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useRouter } from 'next/navigation';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { UserSettingsModal } from '@/components/user-settings-modal';
 
 interface UserProfileMenuProps {
   user: User | null;
@@ -16,8 +16,8 @@ export function UserProfileMenu({ user }: UserProfileMenuProps) {
   const { signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -105,7 +105,7 @@ export function UserProfileMenu({ user }: UserProfileMenuProps) {
             className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
             onClick={() => {
               setIsOpen(false);
-              router.push('/settings');
+              setShowSettingsModal(true);
             }}
           >
             <Settings className="h-4 w-4" />
@@ -123,6 +123,7 @@ export function UserProfileMenu({ user }: UserProfileMenuProps) {
           </button>
         </div>
       )}
+      <UserSettingsModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </div>
   );
 }
