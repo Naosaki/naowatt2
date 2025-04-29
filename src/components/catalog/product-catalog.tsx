@@ -7,7 +7,7 @@ import { Product } from '@/types/product';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileText, ExternalLink } from 'lucide-react';
+import { Search, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -310,13 +310,6 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
     recordDownload(document as Document);
   };
 
-  // Fonction pour visiter le site web du produit
-  const visitWebsite = (websiteUrl: string) => {
-    if (websiteUrl) {
-      window.open(websiteUrl, '_blank');
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -421,21 +414,11 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
                   <CardFooter className="flex justify-between gap-2">
                     <Button 
                       variant="outline" 
-                      className="flex-1"
+                      className="w-full"
                       onClick={() => setSelectedProduct(selectedProduct === product.id ? null : product.id)}
                     >
                       {selectedProduct === product.id ? 'Masquer' : 'Voir les documents'}
                     </Button>
-                    {product.websiteUrl && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => visitWebsite(product.websiteUrl || '')}
-                        title="Visiter le site web"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
                   </CardFooter>
                   
                   {/* Documents associés au produit */}
