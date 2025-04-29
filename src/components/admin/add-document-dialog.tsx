@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { collection, getDocs, doc, setDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, where } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { Category, Language } from '@/lib/types';
@@ -82,7 +82,7 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
   const fetchProductTypes = async () => {
     try {
       console.log('Chargement des types de produits...');
-      const q = query(collection(db, 'productTypes'), orderBy('name'));
+      const q = query(collection(db, 'productTypes'));
       const querySnapshot = await getDocs(q);
       console.log('Nombre de types de produits trouvés:', querySnapshot.size);
       
@@ -100,6 +100,9 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
           console.warn('Type de produit sans nom trouvé:', doc.id, productTypeData);
         }
       });
+      
+      // Trier les types de produits par nom côté client
+      productTypesList.sort((a, b) => a.name.localeCompare(b.name));
       
       setProductTypes(productTypesList);
     } catch (error) {
@@ -122,11 +125,10 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
       const testSnapshot = await getDocs(productsCollectionRef);
       console.log('Collection products existe avec', testSnapshot.size, 'documents');
       
-      // Utiliser une requête moins restrictive, juste filtrer par type de produit
+      // Utiliser une requête simple sans orderBy pour éviter les problèmes d'index
       const q = query(
         collection(db, 'products'),
-        where('productTypeId', '==', productTypeId),
-        orderBy('name')
+        where('productTypeId', '==', productTypeId)
       );
       
       const querySnapshot = await getDocs(q);
@@ -146,6 +148,9 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
           console.warn('Produit sans nom trouvé:', doc.id, productData);
         }
       });
+      
+      // Trier les produits par nom côté client
+      productsList.sort((a, b) => a.name.localeCompare(b.name));
       
       setProducts(productsList);
     } catch (error) {
