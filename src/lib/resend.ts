@@ -13,6 +13,8 @@ type ResendEmailParams = {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
+  clickTracking?: boolean;
 };
 
 type ResendResponse = {
@@ -52,6 +54,8 @@ export async function sendEmail({
       to,
       subject,
       html,
+      text: html.replace(/<[^>]*>/g, ''), // Version texte pour les clients qui ne supportent pas le HTML
+      clickTracking: false, // Désactiver le tracking des clics pour éviter la modification des liens
     });
 
     if (error) {

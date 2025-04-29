@@ -14,6 +14,7 @@ import {
   arrayUnion,
   arrayRemove,
   runTransaction,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -73,16 +74,53 @@ export default function DistributorManagement() {
       const querySnapshot = await getDocs(distributorsRef);
       const distributorsList: DistributorAccount[] = [];
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as Omit<DistributorAccount, "id">;
+      // Obtenir tous les distributeurs
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data() as Omit<DistributorAccount, "id">;
+        const createdAt = data.createdAt ? 
+          (data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)) : 
+          new Date();
+        
+        // Ajouter le distributeur à la liste
         distributorsList.push({
-          id: doc.id,
+          id: docSnapshot.id,
           ...data,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+          // Utiliser companyName comme name si disponible
+          name: data.companyName || data.name,
+          // Utiliser logoUrl comme logo si disponible
+          logo: data.logoUrl || data.logo,
+          createdAt,
+          // Initialiser teamMembers comme tableau vide s'il n'existe pas
+          teamMembers: data.teamMembers || [],
         });
-      });
+      }
 
-      setDistributors(distributorsList);
+      // Compter les membres d'équipe pour chaque distributeur
+      const usersRef = collection(db, "users");
+      const usersSnapshot = await getDocs(usersRef);
+      
+      // Créer un compteur pour chaque distributeur
+      const teamMemberCounts: Record<string, number> = {};
+      
+      // Compter les utilisateurs par distributorId
+      usersSnapshot.forEach((userDoc) => {
+        const userData = userDoc.data();
+        if (userData.distributorId && userData.role === 'distributor') {
+          if (!teamMemberCounts[userData.distributorId]) {
+            teamMemberCounts[userData.distributorId] = 0;
+          }
+          teamMemberCounts[userData.distributorId]++;
+        }
+      });
+      
+      // Mettre à jour le nombre de membres pour chaque distributeur
+      const updatedDistributorsList = distributorsList.map(distributor => ({
+        ...distributor,
+        // Ajouter la propriété teamMemberCount pour l'affichage
+        teamMemberCount: teamMemberCounts[distributor.id] || 0
+      }));
+
+      setDistributors(updatedDistributorsList);
     } catch (error) {
       console.error("Error fetching distributors:", error);
       toast.error("Erreur lors du chargement des distributeurs");
@@ -113,8 +151,17 @@ export default function DistributorManagement() {
   const handleAddDistributor = async () => {
     try {
       const distributorRef = doc(collection(db, "distributors"));
+      
+      // Filtrer les champs undefined pour éviter l'erreur Firestore
+      const filteredData = Object.entries(formData).reduce<Record<string, string | boolean>>((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+      
       await setDoc(distributorRef, {
-        ...formData,
+        ...filteredData,
         createdAt: serverTimestamp(),
         teamMembers: [],
         adminMembers: [],
@@ -126,7 +173,7 @@ export default function DistributorManagement() {
       fetchDistributors();
     } catch (error) {
       console.error("Error adding distributor:", error);
-      toast.error("Erreur lors de l'ajout du distributeur");
+      toast.error("Erreur lors de l&apos;ajout du distributeur");
     }
   };
 
@@ -135,13 +182,19 @@ export default function DistributorManagement() {
 
     try {
       const distributorRef = doc(db, "distributors", selectedDistributor.id);
-      await updateDoc(distributorRef, {
-        ...formData,
-      });
+      
+      // Filtrer les champs undefined pour éviter l'erreur Firestore
+      const updatedData = Object.entries(formData).reduce<Record<string, string | boolean>>((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {});
+      
+      await updateDoc(distributorRef, updatedData);
 
       toast.success("Distributeur mis à jour avec succès");
       setIsEditDialogOpen(false);
-      resetForm();
       fetchDistributors();
     } catch (error) {
       console.error("Error updating distributor:", error);
@@ -212,11 +265,18 @@ export default function DistributorManagement() {
 
       querySnapshot.forEach((doc) => {
         const userData = doc.data() as Omit<User, "id">;
+        const createdAt = userData.createdAt ? 
+          (userData.createdAt instanceof Timestamp ? userData.createdAt.toDate() : new Date(userData.createdAt)) : 
+          new Date();
+        const lastLogin = userData.lastLogin ? 
+          (userData.lastLogin instanceof Timestamp ? userData.lastLogin.toDate() : new Date(userData.lastLogin)) : 
+          undefined;
+        
         teamMembers.push({
           id: doc.id,
           ...userData,
-          createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(),
-          lastLogin: userData.lastLogin?.toDate ? userData.lastLogin.toDate() : undefined,
+          createdAt,
+          lastLogin,
         });
       });
 
@@ -240,11 +300,18 @@ export default function DistributorManagement() {
         const userData = doc.data() as Omit<User, "id">;
         // N'inclure que les utilisateurs qui n'ont pas de distributorId ou qui ont un distributorId différent
         if (!userData.distributorId || userData.distributorId !== distributorId) {
+          const createdAt = userData.createdAt ? 
+            (userData.createdAt instanceof Timestamp ? userData.createdAt.toDate() : new Date(userData.createdAt)) : 
+            new Date();
+          const lastLogin = userData.lastLogin ? 
+            (userData.lastLogin instanceof Timestamp ? userData.lastLogin.toDate() : new Date(userData.lastLogin)) : 
+            undefined;
+          
           availableUsersList.push({
             id: doc.id,
             ...userData,
-            createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(),
-            lastLogin: userData.lastLogin?.toDate ? userData.lastLogin.toDate() : undefined,
+            createdAt,
+            lastLogin,
           });
         }
       });
@@ -497,7 +564,7 @@ export default function DistributorManagement() {
                   ) : (
                     <div className="h-10 w-10 bg-muted flex items-center justify-center rounded-md">
                       <span className="text-xs text-muted-foreground">
-                        {distributor.name.charAt(0)}
+                        {distributor.name && distributor.name.charAt(0) || '?'}
                       </span>
                     </div>
                   )}
@@ -523,7 +590,7 @@ export default function DistributorManagement() {
                     onClick={() => openTeamDialog(distributor)}
                   >
                     <Users className="h-4 w-4 mr-1" />
-                    {distributor.teamMembers?.length || 0} membres
+                    {distributor.teamMemberCount} membres
                   </Button>
                 </TableCell>
                 <TableCell className="text-right">
@@ -651,10 +718,10 @@ export default function DistributorManagement() {
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>
-              Gestion de l'équipe - {selectedDistributor?.name}
+              Gestion de l&apos;équipe - {selectedDistributor?.name}
             </DialogTitle>
             <DialogDescription>
-              Gérez les membres de l'équipe pour ce distributeur.
+              Gérez les membres de l&apos;équipe pour ce distributeur.
             </DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="members" className="w-full">
@@ -665,16 +732,16 @@ export default function DistributorManagement() {
             <TabsContent value="members" className="space-y-4">
               {teamMembers.length === 0 ? (
                 <div className="rounded-lg border p-8 text-center">
-                  <p className="text-muted-foreground">Aucun membre dans l'équipe</p>
+                  <p className="text-muted-foreground">Aucun membre dans l&#39;équipe</p>
                 </div>
               ) : (
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nom</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Administrateur</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="w-1/6">Nom</TableHead>
+                      <TableHead className="w-2/6">Email</TableHead>
+                      <TableHead className="w-1/6">Administrateur</TableHead>
+                      <TableHead className="w-2/6 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -717,13 +784,13 @@ export default function DistributorManagement() {
                   <p className="text-muted-foreground">Aucun utilisateur disponible</p>
                 </div>
               ) : (
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nom</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Administrateur</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="w-1/6">Nom</TableHead>
+                      <TableHead className="w-2/6">Email</TableHead>
+                      <TableHead className="w-1/6">Administrateur</TableHead>
+                      <TableHead className="w-2/6 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -742,11 +809,12 @@ export default function DistributorManagement() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
+                          <div className="flex flex-col md:flex-row justify-end gap-2">
                             <Button
                               variant="default"
                               size="sm"
                               onClick={() => addTeamMember(user.id, false)}
+                              className="w-full md:w-auto whitespace-nowrap text-xs"
                             >
                               Ajouter
                             </Button>
@@ -754,8 +822,9 @@ export default function DistributorManagement() {
                               variant="outline"
                               size="sm"
                               onClick={() => addTeamMember(user.id, true)}
+                              className="w-full md:w-auto whitespace-nowrap text-xs"
                             >
-                              Ajouter comme admin
+                              Ajouter admin
                             </Button>
                           </div>
                         </TableCell>

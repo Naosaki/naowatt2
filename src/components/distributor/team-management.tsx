@@ -176,16 +176,14 @@ export function TeamManagement() {
     }
   };
 
-  // Vérifier si l'utilisateur actuel est administrateur
-  // Pour la phase initiale, tous les distributeurs sont considérés comme administrateurs
-  // jusqu'à ce que la structure d'équipe soit pleinement implantée
-  const isCurrentUserAdmin = true; // Tous les distributeurs peuvent ajouter des collaborateurs
+  // Déterminer si l'utilisateur est un administrateur distributeur
+  const isDistributorAdmin = user?.isDistributorAdmin || user?.id === user?.distributorId;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Gestion de l'équipe</h2>
-        {isCurrentUserAdmin && (
+        {isDistributorAdmin && (
           <Button onClick={() => setShowInviteForm(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
             Inviter un collaborateur
@@ -235,7 +233,7 @@ export function TeamManagement() {
                       <p className="text-sm text-muted-foreground">{teamMember.email}</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      {isCurrentUserAdmin && (
+                      {isDistributorAdmin && (
                         <>
                           <Button
                             variant="outline"

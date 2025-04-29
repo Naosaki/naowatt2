@@ -52,7 +52,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-2">
-            <AppLogo height={60} />
+            <AppLogo height={60} linkToHome={true} />
           </div>
           <CardDescription className="text-center">
             Connectez-vous pour accéder à la documentation des panneaux solaires
@@ -101,7 +101,7 @@ export default function LoginPage() {
               href="/register"
               className="text-primary underline-offset-4 hover:underline"
             >
-              Contactez votre administrateur
+              Créer un compte
             </Link>
           </p>
         </CardFooter>

@@ -8,6 +8,26 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  // Effet pour s'assurer que le composant est monté côté client
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Éviter les erreurs d'hydratation en ne rendant pas le contenu dépendant du thème côté serveur
+  if (!mounted) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="rounded-md h-8 w-8 p-0"
+      >
+        <Sun className="h-4 w-4" />
+        <span className="sr-only">Changer de thème</span>
+      </Button>
+    );
+  }
 
   return (
     <Button

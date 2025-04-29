@@ -198,10 +198,17 @@ export function EmailManagement() {
   const handleSaveSettings = async (settings: EmailSettings) => {
     try {
       setLoading(true);
+      console.log('Tentative de sauvegarde des paramètres email:', settings);
+      
       // Sauvegarder dans Firestore
-      await setDoc(doc(db, 'settings', 'email_settings'), settings);
+      await setDoc(doc(db, 'settings', 'email_settings'), {
+        ...settings,
+        updatedAt: new Date() // Ajouter un timestamp pour forcer la mise à jour
+      });
+      
       // Mettre à jour l'état local
       setEmailSettings(settings);
+      console.log('Paramètres email enregistrés avec succès');
       toast.success('Paramètres email enregistrés avec succès');
     } catch (error) {
       console.error("Erreur lors de l'enregistrement des paramètres email:", error);

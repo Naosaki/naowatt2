@@ -89,11 +89,11 @@ export function PendingInvitations({
   const handleDeleteInvitation = async (invitation: Invitation) => {
     try {
       await deleteDoc(doc(db, 'invitations', invitation.id));
-      toast.success(`L&apos;invitation envoyée à ${invitation.email} a été supprimée.`);
+      toast.success("L'invitation envoyée à " + invitation.email + " a été supprimée.");
       if (onDelete) onDelete();
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'invitation:', error);
-      toast.error('Impossible de supprimer l\'invitation. Veuillez réessayer plus tard.');
+      console.error("Erreur lors de la suppression de l'invitation:", error);
+      toast.error("Impossible de supprimer l'invitation. Veuillez réessayer plus tard.");
     }
   };
 
@@ -102,7 +102,7 @@ export function PendingInvitations({
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Invitations en attente</CardTitle>
-          <CardDescription>Liste des invitations envoyées qui n&apos;ont pas encore été acceptées</CardDescription>
+          <CardDescription>Liste des invitations envoyées qui n'ont pas encore été acceptées</CardDescription>
         </div>
         {onRefresh && (
           <Button variant="ghost" size="sm" onClick={onRefresh}>

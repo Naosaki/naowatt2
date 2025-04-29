@@ -53,7 +53,11 @@ export async function POST(request: NextRequest) {
     const invitationRef = await addDoc(collection(db, 'invitations'), invitationData);
     
     // Construire l'URL d'invitation
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_APP_URL || 'https://datacop.naosk.com';
+    
+    // S'assurer que le lien est absolu et ne sera pas modifié par le service de tracking
     const invitationLink = `${baseUrl}/accept-invitation?token=${invitationToken}&role=${role}`;
     
     // Envoyer l'email d'invitation selon le rôle

@@ -774,7 +774,10 @@ function UserDashboardContent() {
             </TabsContent>
             
             <TabsContent value="catalog" className="mt-0">
-              <ProductCatalog userRole={user?.role || 'user'} />
+              <ProductCatalog 
+                userRole={user?.role || 'user'} 
+                onDocumentDownload={downloadDocument}
+              />
             </TabsContent>
             
             <TabsContent value="downloads" className="mt-0">

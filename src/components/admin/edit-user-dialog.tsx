@@ -26,14 +26,14 @@ import { User } from '@/lib/types';
 
 interface EditUserDialogProps {
   user: User | null;
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
-  onUserUpdated: () => void;
+  onUserUpdated?: () => void;
 }
 
 type UserRole = 'admin' | 'user' | 'distributor' | 'installer';
 
-export function EditUserDialog({ user, isOpen, onClose, onUserUpdated }: EditUserDialogProps) {
+export function EditUserDialog({ user, open, onClose, onUserUpdated }: EditUserDialogProps) {
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +62,7 @@ export function EditUserDialog({ user, isOpen, onClose, onUserUpdated }: EditUse
       await updateDoc(doc(db, 'users', user.uid), updatedData);
       
       toast.success('Utilisateur mis à jour avec succès');
-      onUserUpdated();
+      onUserUpdated?.();
       onClose();
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
@@ -75,7 +75,7 @@ export function EditUserDialog({ user, isOpen, onClose, onUserUpdated }: EditUse
   if (!user) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Modifier l&apos;utilisateur</DialogTitle>

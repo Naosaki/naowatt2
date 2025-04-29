@@ -1,30 +1,56 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, FileEdit, Trash2, Search, Plus } from 'lucide-react';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Search, Plus, Eye, Edit, Trash } from 'lucide-react';
 import { AddUserDialog } from '@/components/admin/add-user-dialog';
 import { EditUserDialog } from '@/components/admin/edit-user-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ViewUserDialog } from '@/components/admin/view-user-dialog';
+import { useAuth } from '@/context/auth-context';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+// Type pour les utilisateurs avec les propriétés nécessaires
+interface UserWithDistributor {
+  uid: string;
+  email: string;
+  displayName?: string;
+  name?: string;
+  role: 'admin' | 'user' | 'distributor' | 'installer';
+  createdAt?: Date | unknown;
+  lastLogin?: Date | unknown;
+  distributorId?: string;
+  isDistributorAdmin?: boolean;
+  distributorName?: string | undefined;
+  [key: string]: any; // Pour les autres propriétés dynamiques
+}
+
+// Type pour les distributeurs
+interface DistributorInfo {
+  id: string;
+  name: string;
+  companyName?: string;
+  logo?: string;
+  logoUrl?: string;
+}
 
 export default function UserManagement() {
-  const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [users, setUsers] = useState<UserWithDistributor[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserWithDistributor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [userToView, setUserToView] = useState(null);
+  const [userToView, setUserToView] = useState<UserWithDistributor | null>(null);
   const [showViewUserDialog, setShowViewUserDialog] = useState(false);
-  const [userToEdit, setUserToEdit] = useState(null);
+  const [userToEdit, setUserToEdit] = useState<UserWithDistributor | null>(null);
   const [showEditUserDialog, setShowEditUserDialog] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [showDeleteUserConfirm, setShowDeleteUserConfirm] = useState(false);
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchUsers();
@@ -45,21 +71,43 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
+      // Récupérer tous les utilisateurs
       const usersQuery = query(collection(db, 'users'));
       const querySnapshot = await getDocs(usersQuery);
       
-      const usersList = [];
+      // Récupérer tous les distributeurs pour avoir accès à leurs noms
+      const distributorsQuery = query(collection(db, 'distributors'));
+      const distributorsSnapshot = await getDocs(distributorsQuery);
+      
+      // Créer un map des distributeurs pour un accès rapide par ID
+      const distributorsMap: { [key: string]: DistributorInfo } = {};
+      distributorsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        distributorsMap[doc.id] = {
+          id: doc.id,
+          name: data.companyName || data.name || 'Sans nom',
+          companyName: data.companyName,
+          logo: data.logo,
+          logoUrl: data.logoUrl
+        };
+      });
+      
+      const usersList: UserWithDistributor[] = [];
       querySnapshot.forEach((doc) => {
         const userData = doc.data();
+        // Ajouter les informations du distributeur si l'utilisateur est associé à un distributeur
+        const distributorInfo = userData.distributorId ? distributorsMap[userData.distributorId] : undefined;
+        
         usersList.push({
           uid: doc.id,
           email: userData.email,
-          displayName: userData.displayName,
+          displayName: userData.name || userData.displayName || 'N/A',
           role: userData.role,
           createdAt: userData.createdAt,
           lastLogin: userData.lastLogin,
           distributorId: userData.distributorId,
           isDistributorAdmin: userData.isDistributorAdmin,
+          distributorName: distributorInfo ? distributorInfo.name : undefined,
           ...userData
         });
       });
@@ -78,12 +126,12 @@ export default function UserManagement() {
     fetchUsers();
   };
 
-  const handleViewUser = (user) => {
+  const handleViewUser = (user: UserWithDistributor) => {
     setUserToView(user);
     setShowViewUserDialog(true);
   };
 
-  const handleEditUser = (user) => {
+  const handleEditUser = (user: UserWithDistributor) => {
     setUserToEdit(user);
     setShowEditUserDialog(true);
   };
@@ -93,13 +141,13 @@ export default function UserManagement() {
     fetchUsers();
   };
 
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = (userId: string) => {
     setUserToDelete(userId);
     setShowDeleteUserConfirm(true);
   };
 
   const confirmDeleteUser = async () => {
-    if (!userToDelete) return;
+    if (!userToDelete || !currentUser?.id) return;
     
     try {
       const userToDeleteObj = users.find(u => u.uid === userToDelete);
@@ -117,7 +165,10 @@ export default function UserManagement() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ userId: userToDelete }),
+          body: JSON.stringify({ 
+            userId: userToDelete,
+            adminUserId: currentUser.id 
+          }),
         });
         
         if (!response.ok) {
@@ -203,7 +254,12 @@ export default function UserManagement() {
                       <TableCell>
                         {user.distributorId ? (
                           <span className="flex items-center">
-                            {user.isDistributorAdmin ? 'Admin' : 'Membre'}
+                            {user.distributorName || 'Sans nom'}
+                            {user.isDistributorAdmin && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-sm text-xs">
+                                Admin
+                              </span>
+                            )}
                           </span>
                         ) : (
                           'N/A'
@@ -223,14 +279,14 @@ export default function UserManagement() {
                             size="icon"
                             onClick={() => handleEditUser(user)}
                           >
-                            <FileEdit className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="icon"
                             onClick={() => handleDeleteUser(user.uid)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -245,14 +301,14 @@ export default function UserManagement() {
 
       {/* Dialogs */}
       <AddUserDialog
-        isOpen={showAddDialog}
+        open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onUserAdded={handleUserAdded}
       />
 
       {userToView && (
         <ViewUserDialog
-          isOpen={showViewUserDialog}
+          open={showViewUserDialog}
           onClose={() => setShowViewUserDialog(false)}
           user={userToView}
         />
@@ -260,20 +316,36 @@ export default function UserManagement() {
 
       {userToEdit && (
         <EditUserDialog
-          isOpen={showEditUserDialog}
+          open={showEditUserDialog}
           onClose={() => setShowEditUserDialog(false)}
           user={userToEdit}
-          onUserEdited={handleUserEdited}
+          onUserUpdated={handleUserEdited}
         />
       )}
 
-      <ConfirmDialog
-        isOpen={showDeleteUserConfirm}
-        onClose={() => setShowDeleteUserConfirm(false)}
-        onConfirm={confirmDeleteUser}
-        title="Supprimer l'utilisateur"
-        description="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible."
-      />
+      <AlertDialog
+        open={showDeleteUserConfirm}
+        onOpenChange={(open) => setShowDeleteUserConfirm(open)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer l&apos;utilisateur</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
+            Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" size="sm" onClick={confirmDeleteUser}>
+                Supprimer
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

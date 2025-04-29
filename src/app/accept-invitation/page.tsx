@@ -21,7 +21,7 @@ interface Invitation {
   id: string;
   email: string;
   name: string;
-  role: 'installer' | 'user';
+  role: 'installer' | 'user' | 'distributor';
   companyName?: string;
   inviterId: string;
   inviterName: string;
@@ -170,12 +170,14 @@ function RegisterContent() {
 
     try {
       // Créer le compte utilisateur
-      const userCredential = await signUp(invitation.email, password);
-
-      if (!userCredential || !userCredential.user) {
-        throw new Error('Impossible de créer le compte');
-      }
-
+      await signUp(
+        invitation.email,
+        password,
+        invitation.name,
+        invitation.role,
+        invitation.role === 'distributor' ? invitation.inviterId : undefined
+      );
+      
       // Mettre à jour le statut de l'invitation
       await updateDoc(doc(db, 'invitations', invitation.id), {
         status: 'accepted',
@@ -187,6 +189,8 @@ function RegisterContent() {
         router.push('/dashboard-installer');
       } else if (invitation.role === 'user') {
         router.push('/dashboard-user');
+      } else if (invitation.role === 'distributor') {
+        router.push('/dashboard-distributor');
       } else {
         router.push('/dashboard');
       }
@@ -258,7 +262,7 @@ function RegisterContent() {
         <CardHeader>
           <CardTitle>Créer votre compte</CardTitle>
           <CardDescription>
-            Vous avez été invité par {invitation?.inviterName || 'un administrateur'} à rejoindre {invitation?.inviterCompany || 'la plateforme'} en tant que {invitation?.role === 'installer' ? 'installateur' : 'utilisateur'}.
+            Vous avez été invité par {invitation?.inviterName || 'un administrateur'} à rejoindre {invitation?.inviterCompany || 'la plateforme'} en tant que {invitation?.role === 'installer' ? 'installateur' : invitation?.role === 'distributor' ? 'distributeur' : 'utilisateur'}.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

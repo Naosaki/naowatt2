@@ -11,8 +11,12 @@ import { Search, FileText, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/context/auth-context';
+import { toast } from 'sonner';
+import { Document } from '@/lib/types';
 
-interface Document {
+// Interface locale pour les documents avec seulement les propriétés nécessaires
+interface CatalogDocument {
   id: string;
   name: string;
   fileUrl: string;
@@ -22,9 +26,10 @@ interface Document {
 
 interface ProductCatalogProps {
   userRole: string;
+  onDocumentDownload?: (document: Document) => void;
 }
 
-export function ProductCatalog({ userRole }: ProductCatalogProps) {
+export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogProps) {
   const [products, setProducts] = useState<(Product & { id: string; typeName: string; imageUrl?: string; documentCount: number })[]>([]);
   const [productTypes, setProductTypes] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,8 +37,9 @@ export function ProductCatalog({ userRole }: ProductCatalogProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-  const [productDocuments, setProductDocuments] = useState<Document[]>([]);
+  const [productDocuments, setProductDocuments] = useState<CatalogDocument[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const { user } = useAuth();
 
   // Fonction pour charger les produits depuis Firestore
   const fetchProducts = useCallback(async () => {
@@ -188,7 +194,7 @@ export function ProductCatalog({ userRole }: ProductCatalogProps) {
       );
       
       const querySnapshot = await getDocs(documentsQuery);
-      const documentsList: Document[] = [];
+      const documentsList: CatalogDocument[] = [];
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -240,9 +246,68 @@ export function ProductCatalog({ userRole }: ProductCatalogProps) {
     return matchesSearch && matchesType;
   });
 
+  // Fonction pour enregistrer un téléchargement dans l'historique
+  const recordDownload = async (document: Document | CatalogDocument) => {
+    // Si une fonction de téléchargement externe est fournie, l'utiliser
+    if (onDocumentDownload) {
+      // Convertir le document au format Document si nécessaire
+      const fullDocument: Document = {
+        ...document,
+        description: (document as Document).description || '',
+        fileSize: (document as Document).fileSize || 0,
+        uploadedBy: (document as Document).uploadedBy || user?.id || '',
+        uploadedAt: (document as Document).uploadedAt || new Date(),
+        category: (document as Document).category || '',
+        productType: (document as Document).productType || '',
+        language: (document as Document).language || '',
+        accessRoles: (document as Document).accessRoles || [userRole],
+        version: (document as Document).version || '1.0',
+      };
+      onDocumentDownload(fullDocument);
+      return;
+    }
+    
+    // Sinon, utiliser la logique interne
+    if (!user) {
+      console.log('Aucun utilisateur connecté, téléchargement non enregistré');
+      return;
+    }
+    
+    try {
+      // Ajouter à Firestore via API
+      const downloadData = {
+        userId: user.id,
+        documentId: document.id,
+        downloadedAt: new Date(),
+        userEmail: user.email,
+        documentName: document.name,
+      };
+      
+      // Enregistrer le téléchargement
+      await fetch('/api/record-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(downloadData),
+      });
+      
+      console.log('Téléchargement enregistré avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du téléchargement:', error);
+    }
+  };
+
   // Fonction pour ouvrir un document
-  const openDocument = (fileUrl: string) => {
-    window.open(fileUrl, '_blank');
+  const openDocument = (document: CatalogDocument) => {
+    // Ouvrir le document dans un nouvel onglet
+    window.open(document.fileUrl, '_blank');
+    
+    // Afficher une notification de téléchargement
+    toast.success('Téléchargement du document en cours...');
+    
+    // Enregistrer le téléchargement dans l'historique
+    recordDownload(document as Document);
   };
 
   // Fonction pour visiter le site web du produit
@@ -389,7 +454,7 @@ export function ProductCatalog({ userRole }: ProductCatalogProps) {
                             <div 
                               key={document.id} 
                               className="flex items-center justify-between rounded-md border bg-background p-2 text-sm hover:bg-muted/50 cursor-pointer"
-                              onClick={() => openDocument(document.fileUrl)}
+                              onClick={() => openDocument(document)}
                             >
                               <div className="flex items-center">
                                 <FileText className="h-4 w-4 mr-2 text-muted-foreground" />

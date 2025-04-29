@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { InviteForm } from '@/components/invite-form';
 import { PendingInvitations, Invitation } from '@/components/pending-invitations';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 
 export default function ManageAccountsPage() {
   const { user, loading } = useAuth();

@@ -20,6 +20,9 @@ export function AccountsSection() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Déterminer si l'utilisateur est un administrateur distributeur
+  const isDistributorAdmin = user?.isDistributorAdmin || user?.id === user?.distributorId;
+  
   // État pour le formulaire d'invitation
   const [showInviteForm, setShowInviteForm] = useState(false);
   
@@ -205,7 +208,9 @@ export function AccountsSection() {
     <div className="space-y-4">
       <div className="flex justify-between">
         <h2 className="text-2xl font-bold">Gestion des comptes</h2>
-        <Button onClick={() => setShowInviteForm(true)}>Inviter un utilisateur</Button>
+        {isDistributorAdmin && (
+          <Button onClick={() => setShowInviteForm(true)}>Inviter un utilisateur</Button>
+        )}
       </div>
 
       {error && (
@@ -250,18 +255,20 @@ export function AccountsSection() {
                             : new Date(installer.createdAt).toLocaleDateString()}
                         </td>
                         <td className="p-2">
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setUserToDelete(installer);
-                                setShowDeleteConfirm(true);
-                              }}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {isDistributorAdmin && (
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setUserToDelete(installer);
+                                  setShowDeleteConfirm(true);
+                                }}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -307,18 +314,20 @@ export function AccountsSection() {
                             : new Date(user.createdAt).toLocaleDateString()}
                         </td>
                         <td className="p-2">
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setUserToDelete(user);
-                                setShowDeleteConfirm(true);
-                              }}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {isDistributorAdmin && (
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setUserToDelete(user);
+                                  setShowDeleteConfirm(true);
+                                }}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}

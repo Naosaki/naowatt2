@@ -9,19 +9,32 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { User } from '@/lib/types';
+
+interface UserWithDistributor {
+  uid: string;
+  email: string;
+  displayName?: string;
+  name?: string;
+  role: 'admin' | 'user' | 'distributor' | 'installer';
+  createdAt?: Date | { toLocaleDateString: () => string; toLocaleTimeString: () => string } | unknown;
+  lastLogin?: Date | { toLocaleDateString: () => string; toLocaleTimeString: () => string } | unknown;
+  distributorId?: string;
+  isDistributorAdmin?: boolean;
+  distributorName?: string | undefined;
+  [key: string]: any; // Pour les autres propriétés dynamiques
+}
 
 interface ViewUserDialogProps {
-  user: User | null;
-  isOpen: boolean;
+  user: UserWithDistributor | null;
+  open: boolean;
   onClose: () => void;
 }
 
-export function ViewUserDialog({ user, isOpen, onClose }: ViewUserDialogProps) {
+export function ViewUserDialog({ user, open, onClose }: ViewUserDialogProps) {
   if (!user) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Détails de l&apos;utilisateur</DialogTitle>
@@ -33,36 +46,53 @@ export function ViewUserDialog({ user, isOpen, onClose }: ViewUserDialogProps) {
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-3 items-center gap-4">
             <div className="font-medium">Nom:</div>
-            <div className="col-span-2">{user.displayName || 'Non défini'}</div>
+            <div className="col-span-2">{user?.displayName}</div>
           </div>
 
           <div className="grid grid-cols-3 items-center gap-4">
             <div className="font-medium">Email:</div>
-            <div className="col-span-2">{user.email}</div>
+            <div className="col-span-2">{user?.email}</div>
           </div>
 
           <div className="grid grid-cols-3 items-center gap-4">
             <div className="font-medium">Rôle:</div>
             <div className="col-span-2">
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                user.role === 'distributor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                user.role === 'installer' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-              }`}>
-                {user.role}
-              </span>
+              {user?.role === 'admin' && 'Administrateur'}
+              {user?.role === 'user' && 'Utilisateur'}
+              {user?.role === 'distributor' && 'Distributeur'}
+              {user?.role === 'installer' && 'Installateur'}
             </div>
           </div>
 
           <div className="grid grid-cols-3 items-center gap-4">
+            <div className="font-medium">Distributeur:</div>
+            <div className="col-span-2">{user?.distributorName || 'N/A'}</div>
+          </div>
+
+          <div className="grid grid-cols-3 items-center gap-4">
             <div className="font-medium">Date de création:</div>
-            <div className="col-span-2">{user.createdAt.toLocaleDateString()} {user.createdAt.toLocaleTimeString()}</div>
+            <div className="col-span-2">
+              {user?.createdAt ? (
+                <>
+                  {typeof user.createdAt.toLocaleDateString === 'function' ? 
+                    `${user.createdAt.toLocaleDateString()} ${user.createdAt.toLocaleTimeString()}` : 
+                    'Date inconnue'}
+                </>
+              ) : 'Non disponible'}
+            </div>
           </div>
 
           <div className="grid grid-cols-3 items-center gap-4">
             <div className="font-medium">Dernière connexion:</div>
-            <div className="col-span-2">{user.lastLogin.toLocaleDateString()} {user.lastLogin.toLocaleTimeString()}</div>
+            <div className="col-span-2">
+              {user?.lastLogin ? (
+                <>
+                  {typeof user.lastLogin.toLocaleDateString === 'function' ? 
+                    `${user.lastLogin.toLocaleDateString()} ${user.lastLogin.toLocaleTimeString()}` : 
+                    'Date inconnue'}
+                </>
+              ) : 'Non disponible'}
+            </div>
           </div>
         </div>
 

@@ -6,13 +6,15 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { AppSettings } from '@/lib/types';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface AppLogoProps {
   className?: string;
   height?: number;
+  linkToHome?: boolean;
 }
 
-export function AppLogo({ className = '', height = 40 }: AppLogoProps) {
+export function AppLogo({ className = '', height = 40, linkToHome = false }: AppLogoProps) {
   const { theme } = useTheme();
   const [appName, setAppName] = useState('DataWatt');
   const [logoLight, setLogoLight] = useState('');
@@ -49,20 +51,39 @@ export function AppLogo({ className = '', height = 40 }: AppLogoProps) {
 
   // Si aucun logo n'est configuré, afficher le nom de l'application
   if (!logoUrl) {
-    return <div className={`font-bold text-xl ${className}`}>{appName}</div>;
+    return linkToHome ? (
+      <Link href="/" className={`font-bold text-xl ${className}`}>
+        {appName}
+      </Link>
+    ) : (
+      <div className={`font-bold text-xl ${className}`}>{appName}</div>
+    );
   }
 
   // Sinon, afficher le logo
   return (
     <div className={`${className} flex items-center`}>
-      <Image 
-        src={logoUrl} 
-        alt={appName} 
-        width={height * 4} 
-        height={height}
-        className="h-auto max-h-[40px] w-auto object-contain"
-        priority
-      />
+      {linkToHome ? (
+        <Link href="/">
+          <Image 
+            src={logoUrl} 
+            alt={appName} 
+            width={height * 4} 
+            height={height}
+            className="h-auto max-h-[40px] w-auto object-contain"
+            priority
+          />
+        </Link>
+      ) : (
+        <Image 
+          src={logoUrl} 
+          alt={appName} 
+          width={height * 4} 
+          height={height}
+          className="h-auto max-h-[40px] w-auto object-contain"
+          priority
+        />
+      )}
     </div>
   );
 }

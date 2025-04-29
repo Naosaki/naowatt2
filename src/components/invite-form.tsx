@@ -58,10 +58,10 @@ export function InviteForm({ onClose, inviterId, onSuccess, inviteMode = 'accoun
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de l\'envoi de l\'invitation');
+        throw new Error(data.error || "Erreur lors de l'envoi de l'invitation");
       }
       
-      toast.success(`L'invitation a été envoyée à ${inviteEmail}.`);
+      toast.success("L'invitation a été envoyée à " + inviteEmail + ".");
       
       // Réinitialiser le formulaire
       setInviteEmail('');
@@ -130,13 +130,13 @@ export function InviteForm({ onClose, inviterId, onSuccess, inviteMode = 'accoun
           
           {inviteRole === 'installer' && (
             <div className="space-y-2">
-              <Label htmlFor="companyName">Nom de l'entreprise</Label>
+              <Label htmlFor="companyName">Nom de l&apos;entreprise</Label>
               <Input 
                 id="companyName" 
                 value={inviteCompanyName} 
                 onChange={(e) => setInviteCompanyName(e.target.value)} 
                 required 
-                placeholder="Nom de l'entreprise de l'installateur"
+                placeholder="Nom de l&apos;entreprise de l&apos;installateur"
               />
             </div>
           )}
@@ -148,9 +148,9 @@ export function InviteForm({ onClose, inviterId, onSuccess, inviteMode = 'accoun
                 checked={isAdmin} 
                 onCheckedChange={setIsAdmin} 
               />
-              <Label htmlFor="isAdmin" className="cursor-pointer">Droits d'administration</Label>
+              <Label htmlFor="isAdmin" className="cursor-pointer">Droits d&apos;administration</Label>
               <p className="text-xs text-muted-foreground ml-2">
-                Permet de gérer les membres de l'équipe et d'inviter de nouveaux collaborateurs
+                Permet de gérer les membres de l&apos;équipe et d&apos;inviter de nouveaux collaborateurs
               </p>
             </div>
           )}
@@ -189,7 +189,7 @@ export function InviteForm({ onClose, inviterId, onSuccess, inviteMode = 'accoun
             ) : (
               <>
                 <Mail className="mr-2 h-4 w-4" />
-                Envoyer l'invitation
+                Envoyer l&apos;invitation
               </>
             )}
           </Button>

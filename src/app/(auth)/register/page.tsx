@@ -10,14 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
+import { AppLogo } from '@/components/app-logo';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [role, setRole] = useState<'admin' | 'user' | 'distributor' | 'installer'>('user');
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, signIn } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,11 +25,26 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await signUp(email, password, displayName, role);
-      toast.success('Account created successfully');
-      router.push('/login');
-    } catch (error: any) {
-      toast.error('Registration failed: ' + (error.message || 'Please try again'));
+      // Le rôle est fixé à 'user' pour les inscriptions publiques
+      await signUp(email, password, displayName, 'user');
+      
+      // Connecter explicitement l'utilisateur après l'inscription
+      console.log('Tentative de connexion après inscription avec:', email);
+      const user = await signIn(email, password);
+      console.log('Connexion après inscription réussie:', user);
+      
+      toast.success('Compte créé avec succès');
+      
+      // Attendre un court instant pour s'assurer que l'état d'authentification est mis à jour
+      setTimeout(() => {
+        // Rediriger vers le tableau de bord général qui redirigera ensuite vers le tableau de bord spécifique
+        console.log('Redirection vers /dashboard');
+        router.push('/dashboard');
+      }, 500);
+    } catch (error: unknown) {
+      console.error('Erreur lors de l\'inscription:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Veuillez réessayer';
+      toast.error('Échec de l\'inscription : ' + errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -39,10 +54,11 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Toaster />
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+        <CardHeader className="space-y-1 flex flex-col items-center">
+          <AppLogo linkToHome={true} />
+          <CardTitle className="text-2xl font-bold mt-4">Créer un compte</CardTitle>
           <CardDescription>
-            Register to access DataWatt documentation portal
+            Inscrivez-vous pour accéder au portail de documentation DataCop
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -52,40 +68,25 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="name@example.com"
+                placeholder="nom@exemple.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="displayName">Full Name</Label>
+              <Label htmlFor="displayName">Nom complet</Label>
               <Input
                 id="displayName"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Jean Dupont"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <select
-                id="role"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={role}
-                onChange={(e) => setRole(e.target.value as 'admin' | 'user' | 'distributor' | 'installer')}
-                required
-              >
-                <option value="user">User</option>
-                <option value="distributor">Distributor</option>
-                <option value="installer">Installer</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Mot de passe</Label>
               <Input
                 id="password"
                 type="password"
@@ -95,18 +96,18 @@ export default function RegisterPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? 'Création du compte...' : 'Créer un compte'}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
+            Vous avez déjà un compte ?{' '}
             <Link
               href="/login"
               className="text-primary underline-offset-4 hover:underline"
             >
-              Sign in
+              Se connecter
             </Link>
           </p>
         </CardFooter>

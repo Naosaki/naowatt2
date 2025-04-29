@@ -416,7 +416,6 @@ export function DashboardOverview() {
     <div className="space-y-6">
       {/* En-tête avec sélecteur de période */}
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Tableau de bord</h2>
         <div className="flex items-center space-x-2">
           <Select
             value={dateRange}

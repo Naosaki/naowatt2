@@ -5,15 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AppLogo } from '@/components/app-logo';
-import { UserProfileMenu } from '@/components/user-profile-menu';
-import { FileText, LayoutDashboard, Store, Users, UserPlus } from 'lucide-react';
+import { FileText, LayoutDashboard, Store, Users, UserPlus, Settings } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { DocumentsSection } from '@/components/distributor/documents-section';
 import { AccountsSection } from '@/components/distributor/accounts-section';
 import { TeamManagement } from '@/components/distributor/team-management';
-import { Toaster } from 'sonner';
+import { SettingsSection } from '@/components/distributor/settings-section';
+import { DistributorHeader } from '@/components/distributor/distributor-header';
+import { Toaster } from '@/components/ui/sonner';
 
 export default function DistributorDashboardPage() {
   const { user, loading } = useAuth();
@@ -89,12 +89,7 @@ export default function DistributorDashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen flex-col">
-        <header className="border-b bg-card px-6 py-4">
-          <div className="flex items-center justify-between">
-            <AppLogo height={40} />
-            <UserProfileMenu user={user} />
-          </div>
-        </header>
+        <DistributorHeader />
         <div className="flex flex-1">
           {/* Sidebar */}
           <aside className="w-64 border-r bg-card p-4">
@@ -130,6 +125,14 @@ export default function DistributorDashboardPage() {
               >
                 <Users className="h-4 w-4 mr-2" />
                 Gestion des comptes
+              </Button>
+              <Button 
+                variant={activeTab === 'settings' ? 'default' : 'ghost'} 
+                className="w-full justify-start" 
+                onClick={() => setActiveTab('settings')}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Paramètres
               </Button>
             </nav>
           </aside>
@@ -215,6 +218,10 @@ export default function DistributorDashboardPage() {
 
             {activeTab === 'accounts' && (
               <AccountsSection />
+            )}
+
+            {activeTab === 'settings' && (
+              <SettingsSection />
             )}
           </main>
         </div>

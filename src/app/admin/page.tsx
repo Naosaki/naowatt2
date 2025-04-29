@@ -72,13 +72,6 @@ export default function AdminPage() {
               Tableau de bord
             </button>
             <button 
-              onClick={() => setActiveTab('users')}
-              className={`flex w-full items-center rounded-md px-3 py-2 text-sm font-medium ${activeTab === 'users' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Utilisateurs
-            </button>
-            <button 
               onClick={() => setActiveTab('documents')}
               className={`flex w-full items-center rounded-md px-3 py-2 text-sm font-medium ${activeTab === 'documents' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
             >
@@ -114,6 +107,13 @@ export default function AdminPage() {
               Langues
             </button>
             <button 
+              onClick={() => setActiveTab('users')}
+              className={`flex w-full items-center rounded-md px-3 py-2 text-sm font-medium ${activeTab === 'users' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Utilisateurs
+            </button>
+            <button 
               onClick={() => setActiveTab('distributors')}
               className={`flex w-full items-center rounded-md px-3 py-2 text-sm font-medium ${activeTab === 'distributors' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
             >
@@ -139,75 +139,62 @@ export default function AdminPage() {
 
         {/* Main content */}
         <main className="flex-1 p-6 overflow-y-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold">
+              {activeTab === 'dashboard' && 'Tableau de bord administrateur'}
+              {activeTab === 'documents' && 'Gestion des documents'}
+              {activeTab === 'categories' && 'Gestion des catégories'}
+              {activeTab === 'productTypes' && 'Gestion des types de produits'}
+              {activeTab === 'products' && 'Gestion des produits'}
+              {activeTab === 'languages' && 'Gestion des langues'}
+              {activeTab === 'users' && 'Gestion des utilisateurs'}
+              {activeTab === 'distributors' && 'Gestion des distributeurs'}
+              {activeTab === 'emails' && 'Gestion des emails'}
+              {activeTab === 'settings' && 'Paramètres de l\'application'}
+            </h1>
+            <p className="text-muted-foreground">
+              {activeTab === 'dashboard' && 'Gérez les utilisateurs, les documents et les paramètres du système'}
+              {activeTab === 'documents' && 'Gérez les documents disponibles sur la plateforme'}
+              {activeTab === 'categories' && 'Gérez les catégories de documents'}
+              {activeTab === 'productTypes' && 'Gérez les types de produits disponibles'}
+              {activeTab === 'products' && 'Gérez les produits disponibles sur la plateforme'}
+              {activeTab === 'languages' && 'Gérez les langues disponibles pour les documents'}
+              {activeTab === 'users' && 'Ajoutez, modifiez ou supprimez des utilisateurs'}
+              {activeTab === 'distributors' && 'Gérez les comptes distributeurs et leurs équipes'}
+              {activeTab === 'emails' && 'Configurez et personnalisez les modèles d\'emails'}
+              {activeTab === 'settings' && 'Configurez les paramètres généraux de l\'application'}
+            </p>
+          </div>
+          
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsContent value="dashboard" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Tableau de bord administrateur</h1>
-                <p className="text-muted-foreground">Gérez les utilisateurs, les documents et les paramètres du système</p>
-              </div>
               <DashboardOverview />
             </TabsContent>
-            <TabsContent value="users" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des utilisateurs</h1>
-                <p className="text-muted-foreground">Ajoutez, modifiez ou supprimez des utilisateurs</p>
-              </div>
-              <UserManagement />
-            </TabsContent>
             <TabsContent value="documents" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des documents</h1>
-                <p className="text-muted-foreground">Gérez les documents disponibles sur la plateforme</p>
-              </div>
               <DocumentManagement />
             </TabsContent>
             <TabsContent value="categories" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des catégories</h1>
-                <p className="text-muted-foreground">Gérez les catégories de documents</p>
-              </div>
               <CategoryManagement />
             </TabsContent>
             <TabsContent value="productTypes" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des types de produits</h1>
-                <p className="text-muted-foreground">Gérez les types de produits disponibles</p>
-              </div>
               <ProductTypeManagement />
             </TabsContent>
             <TabsContent value="products" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des produits</h1>
-                <p className="text-muted-foreground">Gérez les produits disponibles sur la plateforme</p>
-              </div>
               <ProductManagement />
             </TabsContent>
             <TabsContent value="languages" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des langues</h1>
-                <p className="text-muted-foreground">Gérez les langues disponibles pour les documents</p>
-              </div>
               <LanguageManagement />
             </TabsContent>
+            <TabsContent value="users" className="mt-0 space-y-4">
+              <UserManagement />
+            </TabsContent>
             <TabsContent value="distributors" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des distributeurs</h1>
-                <p className="text-muted-foreground">Gérez les comptes distributeurs et leurs équipes</p>
-              </div>
               <DistributorManagement />
             </TabsContent>
             <TabsContent value="emails" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Gestion des emails</h1>
-                <p className="text-muted-foreground">Configurez les modèles d'emails et les paramètres d'envoi</p>
-              </div>
               <EmailManagement />
             </TabsContent>
             <TabsContent value="settings" className="mt-0 space-y-4">
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold">Paramètres de l'application</h1>
-                <p className="text-muted-foreground">Configurez les paramètres globaux de l'application</p>
-              </div>
               <AppSettingsManagement />
             </TabsContent>
           </Tabs>
