@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -157,6 +156,13 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
       console.error('Erreur lors du chargement des langues:', error);
     }
   };
+
+  // Mettre à jour l'état local quand la prop open change
+  useEffect(() => {
+    if (open !== undefined) {
+      setIsOpen(open);
+    }
+  }, [open]);
 
   // Gérer l'ouverture du dialogue
   const handleOpenChange = (newOpen: boolean) => {
@@ -315,9 +321,6 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>Ajouter un document</Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Ajouter un nouveau document</DialogTitle>
@@ -402,7 +405,7 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
                 </SelectContent>
               </Select>
               <p className="text-sm text-gray-500 mt-1">
-                Le type de produit auquel ce document est associé
+                S&apos;il n&apos;existe pas, vous pouvez le créer dans la section Types de produits
               </p>
             </div>
           </div>
