@@ -38,11 +38,16 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { DistributorAccount, User } from "@/lib/types";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Plus, Edit, Trash, Users, Eye } from "lucide-react";
 import Image from "next/image";
 
 export default function DistributorManagement() {
@@ -598,16 +603,23 @@ export default function DistributorManagement() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => openEditDialog(distributor)}
+                      onClick={() => openTeamDialog(distributor)}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Eye className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => openEditDialog(distributor)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
                       size="icon"
                       onClick={() => handleDeleteDistributor(distributor.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
