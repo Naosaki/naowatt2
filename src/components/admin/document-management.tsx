@@ -13,6 +13,7 @@ import { Trash2, Search, FileText, Download, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { AddDocumentDialog } from './add-document-dialog';
 
 // Définition des interfaces
 interface Category {
@@ -65,6 +66,7 @@ export default function DocumentManagement() {
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [showAddDocumentDialog, setShowAddDocumentDialog] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -280,7 +282,7 @@ export default function DocumentManagement() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Gestion des documents</CardTitle>
-          <Button size="sm" onClick={() => window.location.href = '/admin/upload-document'}>
+          <Button size="sm" onClick={() => setShowAddDocumentDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Ajouter un document
           </Button>
@@ -427,6 +429,12 @@ export default function DocumentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AddDocumentDialog
+        open={showAddDocumentDialog}
+        onOpenChange={setShowAddDocumentDialog}
+        onDocumentAdded={() => fetchDocuments()}
+      />
     </div>
   );
 }

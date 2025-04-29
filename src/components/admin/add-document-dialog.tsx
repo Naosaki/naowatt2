@@ -32,13 +32,15 @@ import { Product } from '@/types/product';
 
 interface AddDocumentDialogProps {
   onDocumentAdded?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 type UserRole = 'admin' | 'user' | 'distributor' | 'installer';
 
-export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
+export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDocumentDialogProps) {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(open ?? false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -54,6 +56,7 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [selectedProductType, setSelectedProductType] = useState('');
   const [productTypes, setProductTypes] = useState<{ id: string; name: string }[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Charger les catégories existantes
@@ -157,7 +160,10 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
 
   // Gérer l'ouverture du dialogue
   const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
+    setIsOpen(newOpen);
+    if (onOpenChange) {
+      onOpenChange(newOpen);
+    }
     if (newOpen) {
       fetchCategories();
       fetchProductTypes();
@@ -174,6 +180,7 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
       setAccessRoles(['admin']);
       setFile(null);
       setUploadProgress(0);
+      setError(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -212,7 +219,7 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
     }
 
     if (accessRoles.length === 0) {
-      toast.error('Veuillez sélectionner au moins un rôle d\'accès');
+      toast.error('Veuillez sélectionner au moins un rôle d&apos;accès');
       return;
     }
 
@@ -235,8 +242,8 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
         }, 
         (error) => {
           // Erreur pendant l'upload
-          console.error('Erreur lors de l\'upload:', error);
-          toast.error('Erreur lors de l\'upload du fichier');
+          console.error('Erreur lors de l&apos;upload:', error);
+          setError(`Erreur lors de l'upload: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
           setIsLoading(false);
         }, 
         async () => {
@@ -247,8 +254,9 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
             
             // 3. Créer le document dans Firestore
             const documentId = `doc_${timestamp}`;
+            const docRef = doc(db, 'documents', documentId);
             
-            await setDoc(doc(db, 'documents', documentId), {
+            await setDoc(docRef, {
               id: documentId,
               title: name,
               description,
@@ -256,7 +264,7 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
               fileName: file.name,
               fileType,
               fileSize: file.size,
-              uploadedBy: user?.uid,
+              uploadedBy: user?.id,
               uploadedAt: timestamp,
               categoryId: category,
               productId: productId,
@@ -279,11 +287,12 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
             setAccessRoles(['admin']);
             setFile(null);
             setUploadProgress(0);
+            setError(null);
             if (fileInputRef.current) {
               fileInputRef.current.value = '';
             }
             
-            setOpen(false);
+            setIsOpen(false);
             
             // Appeler le callback si fourni
             if (onDocumentAdded) {
@@ -291,21 +300,21 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
             }
           } catch (error) {
             console.error('Erreur lors de la création du document:', error);
-            toast.error('Erreur lors de la création du document');
+            setError(`Erreur lors de l'ajout du document: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
           } finally {
             setIsLoading(false);
           }
         }
       );
     } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      toast.error('Erreur lors de l\'upload du fichier');
+      console.error('Erreur lors de l&apos;upload:', error);
+      setError(`Erreur lors de l'upload: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
       setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>Ajouter un document</Button>
       </DialogTrigger>
@@ -377,11 +386,11 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
           
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="productType" className="text-right">
-              Type de produit <span className="text-red-500">*</span>
+              Type de produit
             </Label>
-            <div className="col-span-3 flex gap-2">
+            <div className="col-span-3">
               <Select value={selectedProductType} onValueChange={setSelectedProductType}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger>
                   <SelectValue placeholder="Sélectionner un type de produit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -392,6 +401,9 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-sm text-gray-500 mt-1">
+                Le type de produit auquel ce document est associé
+              </p>
             </div>
           </div>
           
@@ -536,10 +548,18 @@ export function AddDocumentDialog({ onDocumentAdded }: AddDocumentDialogProps) {
               </div>
             </div>
           )}
+          
+          {error && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <div className="col-start-2 col-span-3 text-red-500">
+                {error}
+              </div>
+            </div>
+          )}
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
             Annuler
           </Button>
           <Button onClick={handleUpload} disabled={isLoading}>
