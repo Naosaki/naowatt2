@@ -122,10 +122,10 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
       const testSnapshot = await getDocs(productsCollectionRef);
       console.log('Collection products existe avec', testSnapshot.size, 'documents');
       
+      // Utiliser une requête moins restrictive, juste filtrer par type de produit
       const q = query(
         collection(db, 'products'),
         where('productTypeId', '==', productTypeId),
-        where('active', '==', true),
         orderBy('name')
       );
       
@@ -434,9 +434,6 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-gray-500 mt-1">
-                S&apos;il n&apos;existe pas, vous pouvez le créer dans la section Types de produits
-              </p>
             </div>
           </div>
           
