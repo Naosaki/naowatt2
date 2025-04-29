@@ -82,18 +82,23 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
   const fetchProductTypes = async () => {
     try {
       console.log('Chargement des types de produits...');
-      const querySnapshot = await getDocs(collection(db, 'productTypes'));
+      const q = query(collection(db, 'productTypes'), orderBy('name'));
+      const querySnapshot = await getDocs(q);
       console.log('Nombre de types de produits trouvés:', querySnapshot.size);
       
       const productTypesList: { id: string; name: string }[] = [];
       
       querySnapshot.forEach((doc) => {
         const productTypeData = doc.data();
-        productTypesList.push({
-          id: doc.id,
-          name: productTypeData.name,
-        });
-        console.log('Type de produit trouvé:', doc.id, productTypeData.name);
+        if (productTypeData && productTypeData.name) {
+          productTypesList.push({
+            id: doc.id,
+            name: productTypeData.name,
+          });
+          console.log('Type de produit trouvé:', doc.id, productTypeData.name);
+        } else {
+          console.warn('Type de produit sans nom trouvé:', doc.id, productTypeData);
+        }
       });
       
       setProductTypes(productTypesList);
@@ -131,11 +136,15 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
       
       querySnapshot.forEach((doc) => {
         const productData = doc.data() as Product;
-        productsList.push({
-          ...productData,
-          id: doc.id,
-        });
-        console.log('Produit trouvé:', doc.id, productData.name);
+        if (productData && productData.name) {
+          productsList.push({
+            ...productData,
+            id: doc.id,
+          });
+          console.log('Produit trouvé:', doc.id, productData.name);
+        } else {
+          console.warn('Produit sans nom trouvé:', doc.id, productData);
+        }
       });
       
       setProducts(productsList);
@@ -171,6 +180,16 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
     }
   };
 
+  // Effet pour charger les données lorsque la modal s'ouvre
+  useEffect(() => {
+    if (isOpen) {
+      console.log('Modal ouverte, chargement des données...');
+      fetchCategories();
+      fetchProductTypes();
+      fetchLanguages();
+    }
+  }, [isOpen]);
+
   // Mettre à jour l'état local quand la prop open change
   useEffect(() => {
     if (open !== undefined) {
@@ -185,9 +204,6 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
       onOpenChange(newOpen);
     }
     if (newOpen) {
-      fetchCategories();
-      fetchProductTypes();
-      fetchLanguages();
     } else {
       // Réinitialiser les champs lors de la fermeture
       setName('');
