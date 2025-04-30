@@ -9,7 +9,7 @@ import { AppLogo } from '@/components/app-logo';
 import { UserProfileMenu } from '@/components/user-profile-menu';
 import { LayoutDashboard, Download, Search, Book } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, where, doc, getDoc, DocumentReference } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, getDoc, DocumentReference, QueryDocumentSnapshot } from 'firebase/firestore';
 import { Document as DocumentType, DownloadHistory } from '@/lib/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -70,7 +70,7 @@ function UserDashboardContent() {
       const querySnapshot = await getDocs(documentsQuery);
       const documentsList: DocumentType[] = [];
       
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
         const documentData = doc.data();
         // Vérifier si le document est accessible pour les utilisateurs
         if (arrayContainsValue(documentData.accessRoles, 'user')) {
@@ -162,7 +162,7 @@ function UserDashboardContent() {
         }
       }
       
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
         const historyData = doc.data();
         const historyItem: DownloadHistory = {
           id: doc.id,
@@ -286,7 +286,7 @@ function UserDashboardContent() {
       
       // Stocker les paires id-name pour les catégories
       const categoriesList: { id: string, name: string }[] = [];
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
         const categoryData = doc.data();
         // Vérifier si la catégorie est accessible pour les utilisateurs
         if (arrayContainsValue(categoryData.accessRoles, 'user')) {
@@ -316,7 +316,7 @@ function UserDashboardContent() {
       
       // Stocker les paires id-name pour les types de produits
       const productTypesList: { id: string, name: string }[] = [];
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
         const productTypeData = doc.data();
         // Vérifier si le type de produit est accessible pour les utilisateurs
         if (arrayContainsValue(productTypeData.accessRoles, 'user')) {
@@ -346,7 +346,7 @@ function UserDashboardContent() {
       
       // Stocker les paires id-name pour les langues
       const languagesList: { id: string, name: string }[] = [];
-      querySnapshot.forEach((doc) => {
+      querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
         const languageData = doc.data();
         // Vérifier si la langue est accessible pour les utilisateurs
         if (arrayContainsValue(languageData.accessRoles, 'user')) {
@@ -423,7 +423,7 @@ function UserDashboardContent() {
     
     console.log('Résultat final du filtrage:', filtered.length);
     setFilteredDocuments(filtered);
-  }, [searchTerm, categoryFilter, productTypeFilter, languageFilter, recentDocuments]);
+  }, [searchTerm, categoryFilter, productTypeFilter, languageFilter, recentDocuments, categories, languages, productTypes]);
 
   const handleFilterChange = useCallback((type: string, value: string) => {
     if (type === 'category') {
@@ -584,7 +584,7 @@ function UserDashboardContent() {
       />
       
       <header className="border-b bg-card">
-        <div className="flex h-16 items-center justify-between px-6">
+        <div className="flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center">
             <AppLogo height={40} />
           </div>
@@ -594,9 +594,9 @@ function UserDashboardContent() {
         </div>
       </header>
 
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside className="w-64 border-r bg-muted/20 p-4">
+      <div className="flex flex-col md:flex-row flex-1">
+        {/* Sidebar - Caché sur mobile, visible sur desktop */}
+        <aside className="hidden md:block w-64 border-r bg-muted/20 p-4">
           <nav className="space-y-2">
             <button 
               onClick={() => setActiveTab('documents')}
@@ -621,12 +621,38 @@ function UserDashboardContent() {
           </nav>
         </aside>
 
+        {/* Navigation mobile - Visible uniquement sur mobile */}
+        <div className="md:hidden sticky top-0 z-10 bg-background border-b p-2">
+          <div className="flex justify-between items-center overflow-x-auto no-scrollbar">
+            <button 
+              onClick={() => setActiveTab('documents')}
+              className={`flex items-center rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap ${activeTab === 'documents' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Documents
+            </button>
+            <button 
+              onClick={() => setActiveTab('catalog')}
+              className={`flex items-center rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap ${activeTab === 'catalog' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              <Book className="mr-2 h-4 w-4" />
+              Catalogue
+            </button>
+            <button 
+              onClick={() => setActiveTab('downloads')}
+              className={`flex items-center rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap ${activeTab === 'downloads' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              <Download className="mr-2 h-4 w-4" /> Téléchargements
+            </button>
+          </div>
+        </div>
+
         {/* Main content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 md:p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsContent value="documents" className="mt-0">
               <div className="mb-6">
-                <h1 className="text-2xl font-bold">Bibliothèque de documents</h1>
+                <h1 className="text-xl md:text-2xl font-bold">Bibliothèque de documents</h1>
                 <p className="text-muted-foreground">Accédez aux fiches techniques, certifications et manuels</p>
               </div>
 
@@ -805,74 +831,128 @@ function UserDashboardContent() {
                     <p className="text-muted-foreground">Aucun téléchargement trouvé</p>
                   </div>
                 ) : (
-                  <div className="rounded-md border">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b bg-muted/50">
-                            <th className="px-4 py-3 text-left text-sm font-medium">Document</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium">Catégorie</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium">Type de produit</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium">Langue</th>
-                            <th className="px-4 py-3 text-left text-sm font-medium">Date et heure</th>
-                            <th className="px-4 py-3 text-right text-sm font-medium">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {downloadHistory.map((download) => (
-                            <tr key={download.id} className="border-b last:border-0 hover:bg-muted/30">
-                              <td className="px-4 py-3">
-                                <div className="font-medium">{download.documentName}</div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="text-sm text-muted-foreground">
-                                  {download.category || 'Non catégorisé'}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="text-sm text-muted-foreground">
-                                  {download.productType || 'Non spécifié'}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="text-sm text-muted-foreground">
-                                  {download.language || 'Non spécifié'}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="text-sm text-muted-foreground">
-                                  {format(download.downloadedAt, 'dd MMMM yyyy à HH:mm', { locale: fr })}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                {download.fileUrl && (
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => openDocumentFromHistory(download)}
-                                    className="ml-auto"
-                                  >
-                                    <Download className="mr-2 h-4 w-4" /> Télécharger
-                                  </Button>
-                                )}
-                              </td>
+                  <>
+                    {/* Affichage tableau pour desktop */}
+                    <div className="hidden md:block rounded-md border">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="px-4 py-3 text-left text-sm font-medium">Document</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium">Catégorie</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium">Type de produit</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium">Langue</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium">Date et heure</th>
+                              <th className="px-4 py-3 text-right text-sm font-medium">Action</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {downloadHistory.map((download) => (
+                              <tr key={download.id} className="border-b last:border-0 hover:bg-muted/30">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium">{download.documentName}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="text-sm text-muted-foreground">
+                                    {download.category || 'Non catégorisé'}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="text-sm text-muted-foreground">
+                                    {download.productType || 'Non spécifié'}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="text-sm text-muted-foreground">
+                                    {download.language || 'Non spécifié'}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="text-sm text-muted-foreground">
+                                    {format(download.downloadedAt, 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {download.fileUrl && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      onClick={() => openDocumentFromHistory(download)}
+                                      className="ml-auto"
+                                    >
+                                      <Download className="mr-2 h-4 w-4" /> Télécharger
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="flex items-center justify-end p-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={fetchDownloadHistory}
+                          className="flex items-center"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21h5v-5"></path></svg>
+                          Actualiser
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-end p-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={fetchDownloadHistory}
-                        className="flex items-center"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21h5v-5"></path></svg>
-                        Actualiser
-                      </Button>
+
+                    {/* Affichage en cartes pour mobile */}
+                    <div className="md:hidden space-y-4">
+                      {downloadHistory.map((download) => (
+                        <div key={download.id} className="rounded-lg border bg-card overflow-hidden">
+                          <div className="p-4 border-b">
+                            <h3 className="font-medium truncate">{download.documentName}</h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {format(download.downloadedAt, 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                            </p>
+                          </div>
+                          <div className="p-4 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Catégorie:</span>
+                              <span className="font-medium">{download.category || 'Non catégorisé'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Type de produit:</span>
+                              <span className="font-medium">{download.productType || 'Non spécifié'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Langue:</span>
+                              <span className="font-medium">{download.language || 'Non spécifié'}</span>
+                            </div>
+                          </div>
+                          <div className="p-4 pt-0 flex justify-end">
+                            {download.fileUrl && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => openDocumentFromHistory(download)}
+                                className="w-full"
+                              >
+                                <Download className="mr-2 h-4 w-4" /> Télécharger
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-center mt-4">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={fetchDownloadHistory}
+                          className="flex items-center"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21h5v-5"></path></svg>
+                          Actualiser
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             </TabsContent>

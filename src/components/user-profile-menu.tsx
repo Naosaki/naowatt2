@@ -71,13 +71,13 @@ export function UserProfileMenu({ user }: UserProfileMenuProps) {
       />
       
       <button
-        className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+        className="flex items-center gap-2 rounded-full bg-card px-2 sm:px-3 py-1.5 text-sm transition-colors hover:bg-muted"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
           {initials}
         </div>
-        <span className="font-medium">{user.name || user.email}</span>
+        <span className="font-medium hidden sm:inline">{user.name || user.email}</span>
       </button>
 
       {isOpen && (

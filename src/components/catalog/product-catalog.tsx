@@ -313,7 +313,7 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Catalogue de produits</h1>
+        <h1 className="text-xl md:text-2xl font-bold">Catalogue de produits</h1>
         <p className="text-muted-foreground">Découvrez notre gamme de produits et leurs documentations associées</p>
       </div>
 
@@ -360,7 +360,7 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
       </div>
 
       {/* Affichage des produits */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {isLoading ? (
           <div className="col-span-full flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -378,7 +378,7 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
             ) : (
               filteredProducts.map((product) => (
                 <Card key={product.id} className={`overflow-hidden transition-all ${selectedProduct === product.id ? 'ring-2 ring-primary' : ''}`}>
-                  <div className="relative h-48 w-full bg-muted">
+                  <div className="relative h-36 sm:h-48 w-full bg-muted">
                     {product.imageUrl ? (
                       <div className="h-full w-full flex items-center justify-center p-2">
                         <Image 
@@ -396,7 +396,7 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
                       </div>
                     )}
                   </div>
-                  <CardHeader>
+                  <CardHeader className="p-3 sm:p-6">
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle>{product.name}</CardTitle>
@@ -405,13 +405,13 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
                       <Badge variant="secondary">{product.documentCount} document{product.documentCount !== 1 ? 's' : ''}</Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
                     <p className="text-sm line-clamp-3">{product.description}</p>
                     {product.reference && (
                       <p className="text-xs text-muted-foreground mt-2">Référence: {product.reference}</p>
                     )}
                   </CardContent>
-                  <CardFooter className="flex justify-between gap-2">
+                  <CardFooter className="flex justify-between gap-2 p-3 sm:p-6">
                     <Button 
                       variant="outline" 
                       className="w-full"
@@ -423,7 +423,7 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
                   
                   {/* Documents associés au produit */}
                   {selectedProduct === product.id && (
-                    <div className="border-t p-4 bg-muted/30">
+                    <div className="border-t p-3 sm:p-4 bg-muted/30">
                       <h3 className="text-sm font-medium mb-2">Documents associés</h3>
                       {isLoadingDocuments ? (
                         <div className="flex justify-center py-4">
@@ -436,14 +436,14 @@ export function ProductCatalog({ userRole, onDocumentDownload }: ProductCatalogP
                           {productDocuments.map((document) => (
                             <div 
                               key={document.id} 
-                              className="flex items-center justify-between rounded-md border bg-background p-2 text-sm hover:bg-muted/50 cursor-pointer"
+                              className="flex items-center justify-between rounded-md border bg-background p-2 text-xs sm:text-sm hover:bg-muted/50 cursor-pointer"
                               onClick={() => openDocument(document)}
                             >
-                              <div className="flex items-center">
-                                <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                                <span>{document.name}</span>
+                              <div className="flex items-center overflow-hidden">
+                                <FileText className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
+                                <span className="truncate">{document.name}</span>
                               </div>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs ml-2 flex-shrink-0">
                                 {document.fileType.toUpperCase()}
                               </Badge>
                             </div>
