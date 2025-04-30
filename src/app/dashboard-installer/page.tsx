@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/auth-context';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserNav } from '@/components/user-nav';
+import { useAuth } from '@/context/auth-context';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserProfileMenu } from '@/components/user-profile-menu';
 import { FileText, LayoutDashboard, Wrench, BookOpen, Download } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AppLogo } from '@/components/app-logo';
 import { Footer } from '@/components/footer';
 
 export default function InstallerDashboardPage() {
@@ -93,19 +95,27 @@ export default function InstallerDashboardPage() {
         {/* Main content */}
         <main className="flex-1 p-6">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold">Tableau de bord installateur</h1>
-            <p className="text-muted-foreground">Accédez aux guides d'installation et fiches techniques</p>
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold">Tableau de bord installateur</h1>
+              <p className="text-sm text-muted-foreground">
+                Bienvenue sur votre espace installateur
+              </p>
+            </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Documents</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Documents techniques
+                </CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{/* documentCount */}</div>
-                <p className="text-xs text-muted-foreground">Documents disponibles</p>
+                <div className="text-2xl font-bold">Accès complet</div>
+                <p className="text-xs text-muted-foreground">
+                  Accédez à tous les documents techniques
+                </p>
               </CardContent>
             </Card>
             <Card>
