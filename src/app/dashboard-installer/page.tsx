@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/auth-context';
-import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/auth-context';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { AppLogo } from '@/components/app-logo';
+import { UserNav } from '@/components/user-nav';
 import { UserProfileMenu } from '@/components/user-profile-menu';
 import { FileText, LayoutDashboard, Wrench, BookOpen, Download } from 'lucide-react';
 import Link from 'next/link';
+import { Footer } from '@/components/footer';
 
 export default function InstallerDashboardPage() {
   const { user, loading, signOut } = useAuth();
@@ -98,97 +97,66 @@ export default function InstallerDashboardPage() {
             <p className="text-muted-foreground">Accédez aux guides d'installation et fiches techniques</p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card>
-              <CardHeader>
-                <CardTitle>Guides d'installation</CardTitle>
-                <CardDescription>Procédures d'installation détaillées</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Documents</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold">Manuels</p>
-                    <p className="text-sm text-muted-foreground">Guides étape par étape pour l'installation</p>
-                  </div>
-                  <Wrench className="h-8 w-8 text-green-500" />
-                </div>
+                <div className="text-2xl font-bold">{/* documentCount */}</div>
+                <p className="text-xs text-muted-foreground">Documents disponibles</p>
               </CardContent>
-              <CardFooter>
-                <Button className="w-full" variant="outline">
-                  Consulter les guides
-                </Button>
-              </CardFooter>
             </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Produits</CardTitle>
+                <Wrench className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{/* productCount */}</div>
+                <p className="text-xs text-muted-foreground">Produits disponibles</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Dernière mise à jour</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{/* lastUpdate */}</div>
+                <p className="text-xs text-muted-foreground">Documentation mise à jour</p>
+              </CardContent>
+            </Card>
+          </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Fiches techniques</CardTitle>
-                <CardDescription>Spécifications des produits</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold">Datasheets</p>
-                    <p className="text-sm text-muted-foreground">Caractéristiques techniques des panneaux</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" variant="outline">
-                  Voir les fiches techniques
-                </Button>
-              </CardFooter>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Formations</CardTitle>
-                <CardDescription>Ressources de formation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold">Tutoriels</p>
-                    <p className="text-sm text-muted-foreground">Vidéos et guides de formation</p>
-                  </div>
-                  <BookOpen className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" variant="outline">
-                  Accéder aux formations
-                </Button>
-              </CardFooter>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Téléchargements</CardTitle>
-                <CardDescription>Logiciels et outils</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold">Outils</p>
-                    <p className="text-sm text-muted-foreground">Logiciels et applications utiles</p>
-                  </div>
-                  <Download className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" variant="outline">
-                  Télécharger
-                </Button>
-              </CardFooter>
-            </Card>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2">Documents récents</h3>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* recentDocuments.map((doc) => (
+                <Card key={doc.id}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">{doc.name}</CardTitle>
+                    <CardDescription>{doc.category}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <p className="text-xs text-muted-foreground">Ajouté le {doc.dateAdded}</p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button size="sm" variant="outline" asChild className="w-full">
+                      <Link href={doc.url} target="_blank">
+                        <Download className="mr-2 h-4 w-4" /> Télécharger
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )) */}
+            </div>
           </div>
         </main>
       </div>
 
-      <footer className="border-t p-4 text-center text-sm text-muted-foreground">
-        <p> {new Date().getFullYear()} DataWatt - Solar Panel Documentation Portal</p>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { AppLogo } from '@/components/app-logo';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { Footer } from '@/components/footer';
 
 export default function DocumentNotFoundPage() {
   return (
@@ -94,9 +95,7 @@ function DocumentNotFoundContent() {
         </div>
       </main>
       
-      <footer className="border-t p-4 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} DataWatt - Solar Panel Documentation Portal</p>
-      </footer>
+      <Footer />
     </div>
   );
 }

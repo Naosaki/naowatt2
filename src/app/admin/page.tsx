@@ -17,6 +17,7 @@ import DistributorManagement from "@/components/admin/distributor-management";
 import UserManagement from "@/components/admin/user-management";
 import DocumentManagement from "@/components/admin/document-management";
 import { UserProfileMenu } from '@/components/user-profile-menu';
+import { Footer } from '@/components/footer';
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -200,6 +201,7 @@ export default function AdminPage() {
           </Tabs>
         </main>
       </div>
+      <Footer />
     </div>
   );
 }

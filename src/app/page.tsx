@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Footer } from '@/components/footer';
 
 // Interface pour les produits
 interface Product {
@@ -519,23 +520,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-4 md:py-6 w-full">
-        <div className="w-full max-w-7xl mx-auto flex flex-col items-center justify-between gap-4 px-4 md:px-8 lg:px-12 md:h-16 md:flex-row">
-          <p className="text-center text-sm text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} DataCop. Tous droits réservés.
-          </p>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">Connexion</Link>
-            </Button>
-            {websiteUrl && (
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={websiteUrl} target="_blank">Site web</Link>
-              </Button>
-            )}
-          </div>
-        </div>
-      </footer>
+      <Footer showLinks={true} />
 
       {/* Modal de connexion */}
       <Dialog open={isLoginModalOpen} onOpenChange={setIsLoginModalOpen}>

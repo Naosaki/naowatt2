@@ -14,6 +14,7 @@ import { TeamManagement } from '@/components/distributor/team-management';
 import { SettingsSection } from '@/components/distributor/settings-section';
 import { DistributorHeader } from '@/components/distributor/distributor-header';
 import { Toaster } from '@/components/ui/sonner';
+import { Footer } from '@/components/footer';
 
 export default function DistributorDashboardPage() {
   const { user, loading } = useAuth();
@@ -228,6 +229,7 @@ export default function DistributorDashboardPage() {
       </div>
 
       <Toaster />
+      <Footer />
     </div>
   );
 }

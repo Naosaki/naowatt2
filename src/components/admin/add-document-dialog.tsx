@@ -597,7 +597,7 @@ export function AddDocumentDialog({ onDocumentAdded, open, onOpenChange }: AddDo
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
             Annuler
           </Button>
           <Button onClick={handleUpload} disabled={isLoading}>

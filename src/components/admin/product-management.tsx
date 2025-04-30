@@ -82,20 +82,73 @@ function ProductManagement() {
       
       documentsSnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.productId) {
-          const count = documentCountMap.get(data.productId) || 0;
-          documentCountMap.set(data.productId, count + 1);
+        // Vérifier tous les champs possibles qui pourraient contenir l'ID du produit
+        // Compatibilité avec les différents formats de documents
+        const productId = data.productId || null;
+        
+        if (productId) {
+          const count = documentCountMap.get(productId) || 0;
+          documentCountMap.set(productId, count + 1);
+          console.log(`Document ${doc.id} associé au produit ${productId}`);
         }
       });
       
+      // 4. Afficher les informations de débogage pour comprendre le problème
+      console.log('Nombre total de documents:', documentsSnapshot.size);
+      console.log('Nombre de documents avec productId:', Array.from(documentCountMap.entries()).reduce((sum, [, count]) => sum + count, 0));
+      
+      // 5. Mise à jour manuelle des associations pour les panneaux solaires si nécessaire
+      // Rechercher les produits de type panneau solaire
+      const solarPanelTypeId = Array.from(productTypesMap.entries())
+        .find(([, name]) => name.toLowerCase().includes('panneau') || name.toLowerCase().includes('solar'))?.[0];
+      
+      if (solarPanelTypeId) {
+        console.log(`Type de produit panneau solaire trouvé: ${solarPanelTypeId}`);
+        
+        // Récupérer tous les produits de type panneau solaire
+        const solarPanels: {id: string, name: string}[] = [];
+        productsSnapshot.forEach((doc) => {
+          const productData = doc.data() as Product;
+          if (productData.productTypeId === solarPanelTypeId) {
+            solarPanels.push({
+              id: doc.id,
+              name: productData.name
+            });
+          }
+        });
+        
+        console.log(`Panneaux solaires trouvés: ${solarPanels.length}`);
+        
+        // Vérifier les documents qui pourraient être associés à ces panneaux
+        documentsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          // Si le document n'a pas de productId mais a un type de produit correspondant aux panneaux solaires
+          if (!data.productId && (data.productType === solarPanelTypeId || data.productTypeId === solarPanelTypeId)) {
+            // Trouver un panneau solaire correspondant par nom
+            const matchingSolarPanel = solarPanels.find(panel => 
+              data.name?.toLowerCase().includes(panel.name.toLowerCase()) || 
+              data.title?.toLowerCase().includes(panel.name.toLowerCase())
+            );
+            
+            if (matchingSolarPanel) {
+              console.log(`Document ${doc.id} associé manuellement au panneau solaire ${matchingSolarPanel.id}`);
+              const count = documentCountMap.get(matchingSolarPanel.id) || 0;
+              documentCountMap.set(matchingSolarPanel.id, count + 1);
+            }
+          }
+        });
+      }
+      
       productsSnapshot.forEach((doc) => {
         const productData = doc.data() as Product;
+        const documentCount = documentCountMap.get(doc.id) || 0;
+        
         productsList.push({
           ...productData,
           id: doc.id,
           typeName: productTypesMap.get(productData.productTypeId) || 'Type inconnu',
           imageUrl: productData.imageUrl || undefined,
-          documentCount: documentCountMap.get(doc.id) || 0
+          documentCount: documentCount
         });
       });
       

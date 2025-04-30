@@ -9,7 +9,7 @@ import { collection, getDocs, query, orderBy, doc, deleteDoc, updateDoc } from '
 import { db } from '@/lib/firebase';
 import { Category } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, Save, X } from 'lucide-react';
+import { Trash2, Edit, Save, X, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -146,6 +146,7 @@ export function CategoryManagement() {
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-semibold">Gestion des catégories</h2>
         <Button onClick={() => setShowAddDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
           Ajouter une catégorie
         </Button>
       </div>
@@ -234,10 +235,10 @@ export function CategoryManagement() {
                           {category.createdAt.toLocaleDateString()}
                         </div>
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="icon" onClick={() => saveEditing(category.id)}>
+                          <Button variant="outline" size="icon" onClick={() => saveEditing(category.id)}>
                             <Save className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={cancelEditing}>
+                          <Button variant="outline" size="icon" onClick={cancelEditing}>
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
@@ -258,10 +259,10 @@ export function CategoryManagement() {
                           {category.createdAt.toLocaleDateString()}
                         </div>
                         <div className="flex space-x-2">
-                          <Button variant="ghost" size="icon" onClick={() => startEditing(category)}>
+                          <Button variant="outline" size="icon" onClick={() => startEditing(category)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(category.id)}>
+                          <Button variant="outline" size="icon" onClick={() => handleDeleteCategory(category.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

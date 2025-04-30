@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { ProductCatalog } from '@/components/catalog/product-catalog';
+import { Footer } from '@/components/footer';
 
 export default function UserDashboardPage() {
   return (
@@ -762,8 +763,10 @@ function UserDashboardContent() {
                               Mis à jour le {format(document.uploadedAt, 'dd MMMM yyyy', { locale: fr })}
                             </p>
                           </div>
-                          <Button size="sm" variant="outline" onClick={() => downloadDocument(document)}>
-                            <Download className="mr-2 h-4 w-4" /> Télécharger
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={document.fileUrl} target="_blank">
+                              Télécharger
+                            </a>
                           </Button>
                         </div>
                       ))}
@@ -877,9 +880,7 @@ function UserDashboardContent() {
         </main>
       </div>
 
-      <footer className="border-t p-4 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} DataWatt - Solar Panel Documentation Portal</p>
-      </footer>
+      <Footer />
     </div>
   );
 }

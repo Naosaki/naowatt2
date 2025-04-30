@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Search, Download, Plus, Edit } from 'lucide-react';
+import { Trash2, Search, Download, Plus, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -62,13 +62,21 @@ const localToLibDocument = (doc: LocalDocument): Document => {
 export default function DocumentManagement() {
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<LocalDocument[]>([]);
+  const [paginatedDocuments, setPaginatedDocuments] = useState<LocalDocument[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
+  const [products, setProducts] = useState<{id: string, name: string}[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [productTypeFilter, setProductTypeFilter] = useState('all');
   const [languageFilter, setLanguageFilter] = useState('all');
+  const [productFilter, setProductFilter] = useState('all');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
   
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -81,6 +89,7 @@ export default function DocumentManagement() {
     fetchCategories();
     fetchProductTypes();
     fetchLanguages();
+    fetchProducts();
     fetchDocuments();
   }, []);
 
@@ -109,9 +118,23 @@ export default function DocumentManagement() {
     if (languageFilter && languageFilter !== 'all') {
       filtered = filtered.filter(doc => doc.language === languageFilter);
     }
+
+    // Filtre par produit
+    if (productFilter && productFilter !== 'all') {
+      filtered = filtered.filter(doc => doc.productId === productFilter);
+    }
     
     setFilteredDocuments(filtered);
-  }, [documents, searchTerm, categoryFilter, productTypeFilter, languageFilter]);
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [documents, searchTerm, categoryFilter, productTypeFilter, languageFilter, productFilter, itemsPerPage]);
+
+  // Pagination logic
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedDocuments(filteredDocuments.slice(startIndex, endIndex));
+  }, [filteredDocuments, currentPage, itemsPerPage]);
 
   useEffect(() => {
     filterDocuments();
@@ -187,6 +210,26 @@ export default function DocumentManagement() {
     }
   };
 
+  const fetchProducts = async () => {
+    try {
+      const productsQuery = query(collection(db, 'products'));
+      const querySnapshot = await getDocs(productsQuery);
+      
+      const productsList: {id: string, name: string}[] = [];
+      querySnapshot.forEach((doc) => {
+        const productData = doc.data();
+        productsList.push({
+          id: doc.id,
+          name: productData.name || 'Produit sans nom',
+        });
+      });
+      
+      setProducts(productsList);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des produits:', error);
+    }
+  };
+
   const fetchDocuments = async () => {
     setLoading(true);
     try {
@@ -218,6 +261,11 @@ export default function DocumentManagement() {
         });
       });
       
+      // Vérifier et afficher des informations de débogage sur les associations de documents
+      console.log('Nombre total de documents:', documentsList.length);
+      const documentsWithProductId = documentsList.filter(doc => doc.productId);
+      console.log('Documents avec productId:', documentsWithProductId.length);
+      
       setDocuments(documentsList);
       setFilteredDocuments(documentsList);
     } catch (error) {
@@ -240,6 +288,12 @@ export default function DocumentManagement() {
   const getLanguageName = (languageId: string) => {
     const language = languages.find(lang => lang.id === languageId);
     return language ? language.name : 'N/A';
+  };
+
+  const getProductName = (productId: string | undefined) => {
+    if (!productId) return 'N/A';
+    const product = products.find(prod => prod.id === productId);
+    return product ? product.name : 'N/A';
   };
 
   const handleDeleteDocument = (documentId: string) => {
@@ -357,6 +411,21 @@ export default function DocumentManagement() {
               </Select>
             </div>
             <div>
+              <Select value={productFilter} onValueChange={setProductFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrer par produit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les produits</SelectItem>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Select value={languageFilter} onValueChange={setLanguageFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrer par langue" />
@@ -379,6 +448,7 @@ export default function DocumentManagement() {
                   <TableHead>Nom</TableHead>
                   <TableHead>Catégorie</TableHead>
                   <TableHead>Type de produit</TableHead>
+                  <TableHead>Produit</TableHead>
                   <TableHead>Langue</TableHead>
                   <TableHead>Taille</TableHead>
                   <TableHead>Date d&apos;ajout</TableHead>
@@ -388,22 +458,23 @@ export default function DocumentManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       Chargement...
                     </TableCell>
                   </TableRow>
                 ) : filteredDocuments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       Aucun document trouvé
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredDocuments.map((document) => (
+                  paginatedDocuments.map((document) => (
                     <TableRow key={document.id}>
                       <TableCell>{document.name}</TableCell>
                       <TableCell>{getCategoryName(document.category)}</TableCell>
                       <TableCell>{getProductTypeName(document.productType)}</TableCell>
+                      <TableCell>{getProductName(document.productId)}</TableCell>
                       <TableCell>{getLanguageName(document.language)}</TableCell>
                       <TableCell>{document.fileSize ? formatFileSize(document.fileSize) : 'N/A'}</TableCell>
                       <TableCell>
@@ -440,6 +511,56 @@ export default function DocumentManagement() {
               </TableBody>
             </Table>
           </div>
+          
+          {/* Pagination */}
+          {filteredDocuments.length > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">
+                  Afficher
+                </span>
+                <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={itemsPerPage.toString()} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">
+                  documents par page
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} sur {totalPages}
+                </span>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
